@@ -109,19 +109,19 @@ func linkMetaWithzkSync(dataDir string) error {
 
 	zkSyncUrl := `https://wallet.zksync.io/`
 
-	ctx2, cancel1 := chromedp.NewContext(allocCtx)
+	metaCtx, cancel1 := chromedp.NewContext(allocCtx)
 	defer cancel1()
 
-	if err := chromedp.Run(ctx2,
+	if err := chromedp.Run(metaCtx,
 		openMetaWalletActions()...,
 	); err != nil {
 		log.Println(err)
 	}
 
-	ctx1, c1 := chromedp.NewContext(ctx2)
+	zkSyncCtx, c1 := chromedp.NewContext(metaCtx)
 	defer c1()
 
-	err := chromedp.Run(ctx1,
+	err := chromedp.Run(zkSyncCtx,
 		chromedp.Navigate(zkSyncUrl),
 		chromedp.WaitReady(etherWallet),
 		chromedp.Click(etherWallet),
@@ -136,18 +136,17 @@ func linkMetaWithzkSync(dataDir string) error {
 	}
 
 	log.Print("will open meta wallet")
-	var metaCtx = metaPluginCtx(ctx1)
 
 	confirmButton := `//*[@id="app-content"]/div/div[2]/div/div[3]/div[2]/button[2]`
-	title := ""
+	linkButton := `//*[@id="app-content"]/div/div[2]/div/div[2]/div[2]/div[2]/footer/button[2]`
+
 	chromedp.Run(metaCtx,
-		cdpPrint("in extension"),
-		chromedp.Sleep(5*time.Second),
 		chromedp.Reload(),
-		chromedp.Title(&title),
-		cdpPrint("TITLE: "+title),
-		chromedp.WaitReady(`//*[@id="app-content"]/div/div[2]/div/div[2]/div[1]/div[2]`),
+		chromedp.WaitReady(confirmButton),
 		chromedp.Click(confirmButton),
+		chromedp.WaitReady(linkButton),
+		chromedp.Click(linkButton),
+		chromedp.Sleep(time.Minute),
 	)
 
 	return err
@@ -161,19 +160,4 @@ func GbkToUtf8(s []byte) []byte {
 		return nil
 	}
 	return d
-}
-
-func metaPluginCtx(ctx context.Context) context.Context {
-	targets, err := chromedp.Targets(ctx)
-	if err != nil {
-		log.Println("target error: ", err)
-	}
-	for _, t := range targets {
-		if t.Type == "iframe" && t.Title == "MetaMask" {
-			metaCtx, _ := chromedp.NewContext(ctx, chromedp.WithTargetID(t.TargetID))
-			return metaCtx
-		}
-	}
-	log.Println("no meta plugin installed")
-	return nil
 }
