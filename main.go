@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -17,12 +18,29 @@ import (
 
 func main() {
 
+	acc, _ := createEthAccount()
+	log.Println("created account: ", acc)
+
 	dir, _ := os.Getwd()
 	dataDir := path.Join(dir, "data")
 	os.Mkdir(dataDir, 0777)
 	print(dataDir)
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("headless", false),
+		chromedp.Flag("disable-extensions", false),
+		chromedp.Flag("restore-on-startup", false),
+		chromedp.Flag("disable-web-security", true),
+		//chromedp.Flag("load-extension", path.Join(dir, "ext")),
 
-	err := linkMetaWithzkSync(dataDir)
+		chromedp.UserDataDir(dataDir),
+	)
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+
+	allocCtx, cancel := chromedp.NewExecAllocator(ctx, opts...)
+	defer cancel()
+
+	err := linkMetaWithzkSync(allocCtx)
 
 	if err != nil {
 		log.Fatal(err)
@@ -37,8 +55,6 @@ func cdpPrint(s string) chromedp.ActionFunc {
 	})
 
 }
-
-const metaExtUrl = `chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html#`
 
 func getTasks() []chromedp.Action {
 	acts := openMetaWalletActions()
@@ -89,19 +105,7 @@ func createAccounts(n int) []chromedp.Action {
 	return actions
 }
 
-func linkMetaWithzkSync(dataDir string) error {
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", false),
-		chromedp.Flag("disable-extensions", false),
-		chromedp.Flag("restore-on-startup", false),
-		chromedp.Flag("disable-web-security", true),
-		chromedp.UserDataDir(dataDir),
-	)
-	ctx, cancel := chromedp.NewContext(context.Background())
-	defer cancel()
-
-	allocCtx, cancel := chromedp.NewExecAllocator(ctx, opts...)
-	defer cancel()
+func linkMetaWithzkSync(allocCtx context.Context) error {
 
 	etherWallet := `//*[@id="__layout"]/main/section/div/div[1]/div[1]/button[1]`
 	metaMaskButton := `/html/body/aside/section/ul/li[1]/button`
@@ -109,16 +113,15 @@ func linkMetaWithzkSync(dataDir string) error {
 
 	zkSyncUrl := `https://wallet.zksync.io/`
 
-	metaCtx, cancel1 := chromedp.NewContext(allocCtx)
-	defer cancel1()
+	meta := NewMetamask(allocCtx)
+	defer meta.Done()
 
-	if err := chromedp.Run(metaCtx,
-		openMetaWalletActions()...,
-	); err != nil {
-		log.Println(err)
+	if err := meta.OpenAndLogin(metaPasswd); err != nil {
+		return errors.Wrap(err, "open meta")
 	}
+	meta.UnlinkAllSites()
 
-	zkSyncCtx, c1 := chromedp.NewContext(metaCtx)
+	zkSyncCtx, c1 := chromedp.NewContext(meta.Context())
 	defer c1()
 
 	err := chromedp.Run(zkSyncCtx,
@@ -137,19 +140,7 @@ func linkMetaWithzkSync(dataDir string) error {
 
 	log.Print("will open meta wallet")
 
-	confirmButton := `//*[@id="app-content"]/div/div[2]/div/div[3]/div[2]/button[2]`
-	linkButton := `//*[@id="app-content"]/div/div[2]/div/div[2]/div[2]/div[2]/footer/button[2]`
-
-	chromedp.Run(metaCtx,
-		chromedp.Reload(),
-		chromedp.WaitReady(confirmButton),
-		chromedp.Click(confirmButton),
-		chromedp.WaitReady(linkButton),
-		chromedp.Click(linkButton),
-		chromedp.Sleep(time.Minute),
-	)
-
-	return err
+	return meta.ConfirmLinkAccount()
 
 }
 
