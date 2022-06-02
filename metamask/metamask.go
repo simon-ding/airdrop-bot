@@ -1,11 +1,12 @@
-package main
+package metamask
 
 import (
 	"context"
 	"fmt"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
-	"time"
+	"log"
+	"strings"
 )
 
 const metaExtUrl = `chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html#`
@@ -82,17 +83,41 @@ func (m *Metamask) CreateAccounts(n int) error {
 	)
 }
 
-func (m *Metamask) ConfirmLinkAccount() error {
+func (m *Metamask) ConfirmLinkAccount(accounts ...int) error {
 	confirmButton := `//*[@id="app-content"]/div/div[2]/div/div[3]/div[2]/button[2]`
 	linkButton := `//*[@id="app-content"]/div/div[2]/div/div[2]/div[2]/div[2]/footer/button[2]`
+	accountsPos := `//*[@id="app-content"]/div/div[2]/div/div[2]/div[2]/div[2]/div/div`
+	checkBoxPos := `//*[@id="app-content"]/div/div[2]/div/div[2]/div[2]/div[2]/div/div[%d]/div/input`
+
+	var nodes []*cdp.Node
+	chromedp.Run(m.ctx,
+		chromedp.Reload(),
+		chromedp.Nodes(accountsPos, &nodes),
+	)
+	if len(accounts) > 0 {
+		for i := 0; i < len(nodes); i++ {
+			html := ""
+			currentCheckbox := fmt.Sprintf(checkBoxPos, i+1)
+			chromedp.Run(m.ctx,
+				chromedp.OuterHTML(currentCheckbox, &html),
+			)
+			if strings.Contains(strings.ToLower(html), "checked") {
+				//unchecked account
+				log.Printf("account %d checked, uncheck it", i+1)
+				chromedp.Run(m.ctx, chromedp.Click(currentCheckbox))
+			}
+		}
+
+		for i := 0; i < len(accounts); i++ {
+			chromedp.Run(m.ctx, chromedp.Click(fmt.Sprintf(checkBoxPos, accounts[i])))
+		}
+	}
 
 	return chromedp.Run(m.ctx,
-		chromedp.Reload(),
 		chromedp.WaitReady(confirmButton),
 		chromedp.Click(confirmButton),
 		chromedp.WaitReady(linkButton),
 		chromedp.Click(linkButton),
-		chromedp.Sleep(time.Minute),
 	)
 }
 
@@ -105,14 +130,33 @@ func (m *Metamask) SwitchAccount(n int) error {
 }
 
 func (m *Metamask) UnlinkAllSites() error {
-	linkedSites := `//*[@id="popover-content"]/div/div/section/div[2]/main`
+	linkedSites := `//*[@id="popover-content"]/div/div/section/div[2]/main/div`
 	var nodes []*cdp.Node
-	return chromedp.Run(m.ctx,
+	err := chromedp.Run(m.ctx,
 		chromedp.Click(accountExpandPos),
 		chromedp.Click(showLinkedSitesButtonPos),
 		chromedp.Nodes(linkedSites, &nodes),
 		cdpPrint(fmt.Sprint(nodes)),
 	)
+	if err != nil {
+		return err
+	}
+
+	site := `//*[@id="popover-content"]/div/div/section/div[2]/main/div[%d]/div/span`
+	unlinkButton := `//*[@id="popover-content"]/div/div/section/div[2]/main/div[%d]/a`
+	confirmButton := `//*[@id="popover-content"]/div/div/section/div[2]/div/button[2]`
+	var title string
+	for i := 0; i < len(nodes); i++ {
+		chromedp.Run(m.ctx,
+			chromedp.TextContent(fmt.Sprintf(site, i+1), &title),
+		)
+		log.Printf("try to unlink %s", title)
+		chromedp.Run(m.ctx,
+			chromedp.Click(fmt.Sprintf(unlinkButton, i+1)),
+			chromedp.Click(confirmButton),
+		)
+	}
+	return nil
 }
 
 func (m *Metamask) installMetaChromePlugin() error {
@@ -134,5 +178,13 @@ func (m *Metamask) installMetaChromePlugin() error {
 	}
 	fmt.Println(targets)
 	return nil
+
+}
+
+func cdpPrint(s string) chromedp.ActionFunc {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		fmt.Println(s)
+		return nil
+	})
 
 }
