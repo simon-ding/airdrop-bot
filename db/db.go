@@ -19,5 +19,6 @@ func Open() {
 	if err != nil {
 		panic("failed to connect database")
 	}
+	_ = db
 
 }
