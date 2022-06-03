@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
+	"github.com/pkg/errors"
 	"log"
 	"strings"
+	"time"
 )
 
 const metaExtUrl = `chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html#`
@@ -47,11 +49,14 @@ func (m *Metamask) Done() {
 }
 
 func (m *Metamask) OpenAndLogin(passWd string) error {
+	unlock := `/html/body/div[1]/div/div[3]/div/div/button`
 	return chromedp.Run(m.ctx,
 		chromedp.Navigate(metaExtUrl),
 		chromedp.SendKeys(`//*[@id="password"]`, passWd),
-		chromedp.Click(`//*[@id="app-content"]/div/div[3]/div/div/button`, chromedp.NodeVisible), //login
-		chromedp.WaitReady(`//*[@id="app-content"]/div/div[1]/div/div[2]/div[2]/div`),            //avatar
+		chromedp.Sleep(1*time.Second),
+		chromedp.WaitEnabled(unlock),
+		chromedp.Click(unlock), //login
+		chromedp.Sleep(2*time.Second),
 	)
 }
 
@@ -129,6 +134,7 @@ func (m *Metamask) SwitchAccount(n int) error {
 	)
 }
 
+//UnlinkAllSites 取消账户所有网站的链接
 func (m *Metamask) UnlinkAllSites() error {
 	linkedSites := `//*[@id="popover-content"]/div/div/section/div[2]/main/div`
 	var nodes []*cdp.Node
@@ -157,6 +163,49 @@ func (m *Metamask) UnlinkAllSites() error {
 		)
 	}
 	return nil
+}
+
+// SwitchNetwork 切换钱包网络
+func (m *Metamask) SwitchNetwork(net string) error {
+	networkListExpendPos := `//*[@id="app-content"]/div/div[1]/div/div[2]/div[1]/div`
+	networkList := `//*[@id="app-content"]/div/div[2]/div/div[2]/li`
+
+	var nodes []*cdp.Node
+	chromedp.Run(m.ctx,
+		chromedp.Click(networkListExpendPos),
+		chromedp.Nodes(networkList, &nodes),
+	)
+
+	networkName := `//*[@id="app-content"]/div/div[2]/div/div[2]/li[%d]/span`
+	for i := 0; i < len(nodes); i++ {
+		var name string
+		chromedp.Run(m.ctx,
+			chromedp.TextContent(fmt.Sprintf(networkName, i+1), &name),
+		)
+
+		if strings.Contains(name, net) {
+			chromedp.Run(m.ctx,
+				chromedp.Click(fmt.Sprintf(`//*[@id="app-content"]/div/div[2]/div/div[2]/li[%d]`, i+1)),
+			)
+			return nil
+		}
+	}
+	return errors.New("network not found: " + net)
+}
+
+func (m *Metamask) ConfirmTransaction() error {
+	confirmButton := `//*[@id="app-content"]/div/div[3]/div/div[4]/div[4]/footer/button[2]`
+	return chromedp.Run(m.ctx,
+		chromedp.Reload(),
+		chromedp.Click(confirmButton),
+	)
+}
+
+func (m *Metamask) SignTransaction() error {
+	signButton := `//*[@id="app-content"]/div/div[3]/div/div[4]/button[2]`
+	return chromedp.Run(m.ctx,
+		chromedp.Click(signButton),
+	)
 }
 
 func (m *Metamask) installMetaChromePlugin() error {

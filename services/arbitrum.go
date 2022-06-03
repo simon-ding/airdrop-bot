@@ -1,4 +1,4 @@
-package arbitrum
+package services
 
 import (
 	"airdrop-bot/metamask"
@@ -25,10 +25,12 @@ type Arbitrum struct {
 }
 
 func (a *Arbitrum) Deposit(amount float64) error {
+	confirmMove := `//*[@id="headlessui-dialog-13"]/div/div[2]/div[2]/button[1]`
 	return chromedp.Run(a.ctx,
 		chromedp.Navigate(arbitrumBridgeUrl),
 		chromedp.SendKeys(input, fmt.Sprintf("%f", amount)),
 		chromedp.Click(depositButton),
+		chromedp.Click(confirmMove),
 	)
 }
 

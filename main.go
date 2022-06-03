@@ -1,12 +1,13 @@
 package main
 
 import (
-	"airdrop-bot/arbitrum"
 	"airdrop-bot/metamask"
+	"airdrop-bot/services"
 	"context"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
 	"log"
+	"math/big"
 	"os"
 	"path"
 	"time"
@@ -36,9 +37,9 @@ func main() {
 	meta := metamask.NewMetamask(allocCtx)
 	meta.OpenAndLogin(metaPasswd)
 
-	arb := arbitrum.NewArbitrum(meta.Context(), meta)
+	gmx := services.NewGmx(meta.Context(), meta)
 
-	arb.LinkMetaMask()
+	gmx.SwapCoin("ETH", "USDC", big.NewFloat(0.002))
 
 	time.Sleep(time.Minute)
 }
