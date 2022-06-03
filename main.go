@@ -5,6 +5,7 @@ import (
 	"airdrop-bot/log"
 	"airdrop-bot/metamask"
 	"airdrop-bot/services"
+	"airdrop-bot/utils"
 	"context"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
@@ -22,6 +23,12 @@ func main() {
 	}
 	log.Info("read config success")
 
+	fee, err := utils.GetGasFee(&cfg.Owlracle)
+	if err != nil {
+		log.Errorf("get gas fee error: %v", err)
+	}
+
+	log.Infof("current gas fee is %+v", *fee)
 	dir, _ := os.Getwd()
 	dataDir := path.Join(dir, "data")
 	os.Mkdir(dataDir, 0777)
