@@ -1,15 +1,16 @@
 package services
 
 import (
+	"airdrop-bot/log"
 	"airdrop-bot/metamask"
 	"airdrop-bot/utils"
 	"context"
 	"fmt"
-	"github.com/chromedp/cdproto/cdp"
-	"github.com/chromedp/chromedp"
-	"log"
 	"math/big"
 	"time"
+
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/chromedp"
 )
 
 const gmxUrl = `https://gmx.io/trade`
@@ -68,7 +69,7 @@ func (g *Gmx) SwapCoin(from, to string, amount *big.Float) error {
 		if s == from {
 			chromedp.Run(g.ctx, chromedp.Click(fmt.Sprintf(selected, i+1)))
 			found = true
-			log.Printf("select from coin %d", i+1)
+			log.Infof("select from coin %d", i+1)
 			break
 		}
 
@@ -102,7 +103,7 @@ func (g *Gmx) SwapCoin(from, to string, amount *big.Float) error {
 		if s == to {
 			chromedp.Run(g.ctx, chromedp.Click(fmt.Sprintf(selected, i+1)))
 			found = true
-			log.Printf("select to coin %d", i+1)
+			log.Infof("select to coin %d", i+1)
 			break
 		}
 

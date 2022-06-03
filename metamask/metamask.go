@@ -1,12 +1,12 @@
 package metamask
 
 import (
+	"airdrop-bot/log"
 	"context"
 	"fmt"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
-	"log"
 	"strings"
 	"time"
 )
@@ -108,7 +108,7 @@ func (m *Metamask) ConfirmLinkAccount(accounts ...int) error {
 			)
 			if strings.Contains(strings.ToLower(html), "checked") {
 				//unchecked account
-				log.Printf("account %d checked, uncheck it", i+1)
+				log.Infof("account %d checked, uncheck it", i+1)
 				chromedp.Run(m.ctx, chromedp.Click(currentCheckbox))
 			}
 		}
@@ -156,7 +156,7 @@ func (m *Metamask) UnlinkAllSites() error {
 		chromedp.Run(m.ctx,
 			chromedp.TextContent(fmt.Sprintf(site, i+1), &title),
 		)
-		log.Printf("try to unlink %s", title)
+		log.Infof("try to unlink %s", title)
 		chromedp.Run(m.ctx,
 			chromedp.Click(fmt.Sprintf(unlinkButton, i+1)),
 			chromedp.Click(confirmButton),

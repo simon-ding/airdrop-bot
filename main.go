@@ -1,12 +1,13 @@
 package main
 
 import (
+	"airdrop-bot/cfg"
+	"airdrop-bot/log"
 	"airdrop-bot/metamask"
 	"airdrop-bot/services"
 	"context"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"os"
 	"path"
@@ -15,10 +16,15 @@ import (
 
 func main() {
 
+	cfg, err := cfg.LoadConfig()
+	if err != nil {
+		log.Panicf("read config: %v", err)
+	}
+
 	dir, _ := os.Getwd()
 	dataDir := path.Join(dir, "data")
 	os.Mkdir(dataDir, 0777)
-	print(dataDir)
+
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", false),
 		chromedp.Flag("disable-extensions", false),
@@ -35,7 +41,7 @@ func main() {
 	defer cancel()
 
 	meta := metamask.NewMetamask(allocCtx)
-	meta.OpenAndLogin(metaPasswd)
+	meta.OpenAndLogin(cfg.WalletPassword)
 
 	gmx := services.NewGmx(meta.Context(), meta)
 
@@ -43,8 +49,6 @@ func main() {
 
 	time.Sleep(time.Minute)
 }
-
-var metaPasswd = os.Args[1]
 
 func linkMetaWithzkSync(allocCtx context.Context) error {
 
@@ -57,7 +61,7 @@ func linkMetaWithzkSync(allocCtx context.Context) error {
 	meta := metamask.NewMetamask(allocCtx)
 	defer meta.Done()
 
-	if err := meta.OpenAndLogin(metaPasswd); err != nil {
+	if err := meta.OpenAndLogin("metaPasswd"); err != nil {
 		return errors.Wrap(err, "open meta")
 	}
 
@@ -75,10 +79,10 @@ func linkMetaWithzkSync(allocCtx context.Context) error {
 
 	)
 	if err != nil {
-		log.Print("tab error: ", err.Error())
+		log.Errorf("tab error: %v", err)
 	}
 
-	log.Print("will open meta wallet")
+	log.Info("will open meta wallet")
 
 	return meta.ConfirmLinkAccount(3)
 
