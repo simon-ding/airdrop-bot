@@ -12,6 +12,10 @@
 * gas费实时数据
 * 步骤中加入随机时间
 
+## Thoughts
+
+* Xvfb可以实现虚拟的显示服务，用来驱动chrome不使用headless模式
+
 ## 技术选型
 
  * 浏览器通讯：chromedp

@@ -7,13 +7,13 @@ import (
 )
 
 type Config struct {
-	WalletPassword string   `mapstructure:"wallet-password"`
+	WalletPassword string   `mapstructure:"walletPassword"`
 	Owlracle       Owlracle `mapstructure:"owlracle"`
 }
 
 type Owlracle struct {
-	ApiKey    string `mapstructure:"api-key"`
-	ApiSecret string `mapstructure:"api-secret"`
+	ApiKey    string `mapstructure:"apiKey"`
+	ApiSecret string `mapstructure:"apiSecret"`
 }
 
 func LoadConfig() (*Config, error) {

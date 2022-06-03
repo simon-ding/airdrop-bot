@@ -1,6 +1,7 @@
 package main
 
 import (
+	"airdrop-bot/aws"
 	"airdrop-bot/cfg"
 	"airdrop-bot/log"
 	"airdrop-bot/metamask"
@@ -16,6 +17,7 @@ import (
 )
 
 func main() {
+	dir, _ := os.Getwd()
 
 	cfg, err := cfg.LoadConfig()
 	if err != nil {
@@ -23,13 +25,14 @@ func main() {
 	}
 	log.Info("read config success")
 
+	aws.Load(path.Join(dir, "aws.config"))
+
 	fee, err := utils.GetGasFee(&cfg.Owlracle)
 	if err != nil {
 		log.Errorf("get gas fee error: %v", err)
 	}
 
 	log.Infof("current gas fee is %+v", *fee)
-	dir, _ := os.Getwd()
 	dataDir := path.Join(dir, "data")
 	os.Mkdir(dataDir, 0777)
 	log.Infof("use chrome user dir: %v", dataDir)
