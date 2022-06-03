@@ -1,6 +1,7 @@
 package services
 
 import (
+	"airdrop-bot/log"
 	"airdrop-bot/metamask"
 	"context"
 	"fmt"
@@ -89,6 +90,7 @@ func (a *Aave) BorrowMoney(coinType string, amount float64) error {
 				chromedp.SendKeys(borrowDialog, fmt.Sprintf("%f", amount)),
 				chromedp.Click(confirmBorrow),
 			)
+			log.Infof("borrow coin %s of amount %d", coinType, amount)
 
 			return a.meta.ConfirmTransaction()
 		}

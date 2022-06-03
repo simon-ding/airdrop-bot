@@ -20,11 +20,12 @@ func main() {
 	if err != nil {
 		log.Panicf("read config: %v", err)
 	}
+	log.Info("read config success")
 
 	dir, _ := os.Getwd()
 	dataDir := path.Join(dir, "data")
 	os.Mkdir(dataDir, 0777)
-
+	log.Infof("use chrome use dir: %v", dataDir)
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", false),
 		chromedp.Flag("disable-extensions", false),

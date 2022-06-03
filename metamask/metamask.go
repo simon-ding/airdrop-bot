@@ -44,6 +44,7 @@ func (m *Metamask) Open() error {
 func (m *Metamask) Context() context.Context {
 	return m.ctx
 }
+
 func (m *Metamask) Done() {
 	m.cancel()
 }
@@ -195,6 +196,7 @@ func (m *Metamask) SwitchNetwork(net string) error {
 
 func (m *Metamask) ConfirmTransaction() error {
 	confirmButton := `//*[@id="app-content"]/div/div[3]/div/div[4]/div[4]/footer/button[2]`
+	log.Infof("confirm metamask transaction")
 	return chromedp.Run(m.ctx,
 		chromedp.Reload(),
 		chromedp.Click(confirmButton),
