@@ -66,3 +66,7 @@ func Test_linkMetaWithzkSync(t *testing.T) {
 	fmt.Print(nodes[0].Dump("  ", "  ", false))
 
 }
+
+func Test2(t *testing.T) {
+
+}

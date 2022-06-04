@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/chromedp/chromedp"
+	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
@@ -49,4 +50,14 @@ func NewMnemonic(bitSize int) (string, error) {
 
 func NewMnemonic128() (string, error) {
 	return NewMnemonic(128)
+}
+
+func NewEthAccount() (string, string, string) {
+	mnemonic, _ := hdwallet.NewMnemonic(128)
+	wallet, _ := hdwallet.NewFromMnemonic(mnemonic)
+
+	path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0/0")
+	account, _ := wallet.Derive(path, false)
+	PriKey, _ := wallet.PrivateKeyHex(account)
+	return mnemonic, account.Address.Hex(), PriKey
 }

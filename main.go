@@ -51,9 +51,7 @@ func main() {
 
 func do(cfg *cfg.Config) error {
 
-	if err := FirstRunGenAccount(cfg.AccountsToGen, cfg.Dir); err != nil {
-		return err
-	}
+	FirstRunGenAccount(cfg.AccountsToGen)
 
 	lightsail, err := aws.CreateLightsailClient("", path.Join(cfg.Dir, "asserts", "aws.config"))
 	if err != nil {
@@ -130,13 +128,23 @@ func do(cfg *cfg.Config) error {
 	return nil
 }
 
-func FirstRunGenAccount(num int, dir string) error {
+func FirstRunGenAccount(num int) {
 	accountNum := db.AccountNum()
 	if accountNum != 0 {
 		log.Infof("accounts have already been generated,skip")
-		return nil
+		return
 	}
-	return generateAccounts(num, dir)
+	for i := 0; i < num; i++ {
+		mnemonic, address, priKey := utils.NewEthAccount()
+		a := db.Account{
+			Mnemonic:   mnemonic,
+			Address:    address,
+			PrivateKey: priKey,
+			Services:   nil,
+		}
+		log.Infof("generate eth account: %s", address)
+		db.SaveAccount(&a)
+	}
 }
 
 type Action func(*metamask.Metamask) error
