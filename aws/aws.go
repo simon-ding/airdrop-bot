@@ -9,25 +9,65 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Load(dir string) error {
+func CreateLightsailClient(instanceName, cfgDir string) (*Client, error) {
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigFiles(
-			[]string{dir},
+			[]string{cfgDir},
 		),
 		config.WithRegion(string(types.RegionNameApSoutheast1)),
 	)
 	if err != nil {
-		return errors.Wrap(err, "load aws config")
+		return nil, errors.Wrap(err, "load aws config")
 	}
 	client := lightsail.NewFromConfig(cfg)
 
 	outputs, err := client.GetStaticIps(context.TODO(), &lightsail.GetStaticIpsInput{})
 
 	log.Info(outputs, err)
-	return nil
+	c := &Client{Client: client, instanceName: instanceName}
+	return c, nil
 }
 
 type Client struct {
-	lightsail *lightsail.Client
+	*lightsail.Client
+	instanceName string
+}
+
+func (c *Client) CreateIp(name string) error {
+	in := lightsail.AllocateStaticIpInput{
+		StaticIpName: &name,
+	}
+	out, err := c.AllocateStaticIp(context.TODO(), &in)
+	if err != nil {
+		return errors.Wrap(err, "new ip")
+	}
+
+	log.Infof("new ip created: %+v", out)
+	return nil
+}
+
+func (c *Client) DetachIp(name string) error {
+	in := lightsail.DetachStaticIpInput{StaticIpName: &name}
+
+	out, err := c.Client.DetachStaticIp(context.TODO(), &in)
+	if err != nil {
+		return errors.Wrap(err, "detach ip")
+	}
+	log.Infof("ip %s detach success: %+v", name, out)
+	return nil
+}
+
+func (c *Client) AttachIp(name string) error {
+	in := lightsail.AttachStaticIpInput{
+		InstanceName: &c.instanceName,
+		StaticIpName: &name,
+	}
+
+	out, err := c.Client.AttachStaticIp(context.TODO(), &in)
+	if err != nil {
+		return errors.Wrap(err, "attach ip")
+	}
+	log.Infof("attach ip %s to instance %s success: %+v", name, c.instanceName, out)
+	return nil
 }

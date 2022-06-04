@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	WalletPassword string   `mapstructure:"walletPassword"`
+	AccountsPerIp  int      `mapstructure:"accountsPerIp"`
 	Owlracle       Owlracle `mapstructure:"owlracle"`
 }
 
@@ -21,6 +22,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetConfigType("yaml")   // REQUIRED if the config file does not have the extension in the name
 	viper.AddConfigPath(".")
 	viper.SetDefault("wallet-password", "")
+	viper.SetDefault("accountsPerIp", 3)
 
 	// optionally look for config in the working directory
 	var cfg Config

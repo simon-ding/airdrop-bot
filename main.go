@@ -1,7 +1,6 @@
 package main
 
 import (
-	"airdrop-bot/aws"
 	"airdrop-bot/cfg"
 	"airdrop-bot/log"
 	"airdrop-bot/metamask"
@@ -24,8 +23,6 @@ func main() {
 		log.Panicf("read config: %v", err)
 	}
 	log.Info("read config success")
-
-	aws.Load(path.Join(dir, "aws.config"))
 
 	fee, err := utils.GetGasFee(&cfg.Owlracle)
 	if err != nil {
