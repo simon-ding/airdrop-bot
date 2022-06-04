@@ -6,6 +6,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	ArbitrumService = "arbitrum"
+)
+
+// Account 代表metamask里的一个账户，MetamaskIndex是必须的
 type Account struct {
 	gorm.Model
 	MetamaskIndex int    `json:"metamaskIndex"`
@@ -14,6 +19,7 @@ type Account struct {
 	Services      []StaticIpAccountRelation
 }
 
+// StaticIpAccountRelation 账户和ip的对应关系，Service为服务名称，如arbitrum等
 type StaticIpAccountRelation struct {
 	gorm.Model
 	Service    string `json:"service,omitempty"`
@@ -21,6 +27,7 @@ type StaticIpAccountRelation struct {
 	StaticIpID uint   `json:"staticIpID,omitempty"`
 }
 
+// StaticIp 代表aws分配的一个ip，它可以和metamask里的一个或多个账号绑定
 type StaticIp struct {
 	gorm.Model
 	Name     string                    `json:"name,omitempty"`
