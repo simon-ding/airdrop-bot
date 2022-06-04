@@ -8,9 +8,9 @@ import (
 
 type Account struct {
 	gorm.Model
-	MetamaskIndex int `json:"metamaskIndex"`
-	Address       string
-	PrivateKey    string
+	MetamaskIndex int    `json:"metamaskIndex"`
+	Address       string `json:"address"`
+	PrivateKey    string `json:"privateKey"`
 	Services      []StaticIpAccountRelation
 }
 
