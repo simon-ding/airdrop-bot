@@ -9,7 +9,9 @@ import (
 type Config struct {
 	WalletPassword string   `mapstructure:"walletPassword"`
 	AccountsPerIp  int      `mapstructure:"accountsPerIp"`
+	AccountsToGen  int      `mapstructure:"accountsToGen"`
 	Owlracle       Owlracle `mapstructure:"owlracle"`
+	Dir            string   `mapstructure:"dir"`
 }
 
 type Owlracle struct {
@@ -23,6 +25,7 @@ func LoadConfig() (*Config, error) {
 	viper.AddConfigPath(".")
 	viper.SetDefault("walletPassword", "")
 	viper.SetDefault("accountsPerIp", 3)
+	viper.SetDefault("dir", ".")
 
 	// optionally look for config in the working directory
 	var cfg Config

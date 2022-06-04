@@ -18,7 +18,6 @@ import (
 )
 
 func main() {
-	dir, _ := os.Getwd()
 
 	cfg, err := cfg.LoadConfig()
 	if err != nil {
@@ -26,33 +25,47 @@ func main() {
 	}
 	log.Info("read config success")
 
-	db.Open(dir)
+	db.Open(cfg.Dir)
 	log.Infof("db open success")
 
-	//fee, err := utils.GetGasFee(&cfg.Owlracle)
-	//if err != nil {
-	//	log.Errorf("get gas fee error: %v", err)
-	//}
-	//log.Infof("current gas fee is %+v", *fee)
+	fee, err := utils.GetGasFee(&cfg.Owlracle)
+	if err != nil {
+		log.Errorf("get gas fee error: %v", err)
+	}
+	log.Infof("current estimated gas fee is %+v", fee.Speeds[1].EstimatedFee)
 
-	dataDir := path.Join(dir, "data")
+	//if fee.Speeds[1].EstimatedFee > 7 {
+	//	log.Error("gas fee too high")
+	//	return
+	//}
+
+	dataDir := path.Join(cfg.Dir, "data")
 	os.Mkdir(dataDir, 0777)
 	log.Infof("use chrome user dir: %v", dataDir)
-	if err := do(dir, cfg); err != nil {
+	if err := do(cfg); err != nil {
 		log.Errorf("do error: %v", err)
 		return
 	}
 	time.Sleep(time.Minute)
 }
 
-func do(dir string, cfg *cfg.Config) error {
-	lightsail, err := aws.CreateLightsailClient("", path.Join(dir, "asserts", "aws.config"))
+func do(cfg *cfg.Config) error {
+
+	if err := FirstRunGenAccount(cfg.AccountsToGen, cfg.Dir); err != nil {
+		return err
+	}
+
+	lightsail, err := aws.CreateLightsailClient("", path.Join(cfg.Dir, "asserts", "aws.config"))
 	if err != nil {
 		return errors.Wrap(err, "create lightsail client")
 	}
 
-	for i := 0; i < 50; i++ {
+	for i := 0; i < cfg.AccountsToGen; i++ {
 		account := db.FindAccount(i + 1)
+		if account.ID == 0 {
+			log.Errorf("accounts with id %d not found in db, skip it", i+1)
+			continue
+		}
 
 		attachedIpName, err := lightsail.GetAttachedIp()
 		if err != nil {
@@ -108,7 +121,7 @@ func do(dir string, cfg *cfg.Config) error {
 
 		}
 
-		err = DoAllStep(dir, cfg, account)
+		err = DoAllStep(cfg, account)
 		if err != nil {
 			log.Errorf("do error: %v", err)
 		}
@@ -117,15 +130,24 @@ func do(dir string, cfg *cfg.Config) error {
 	return nil
 }
 
+func FirstRunGenAccount(num int, dir string) error {
+	accountNum := db.AccountNum()
+	if accountNum != 0 {
+		log.Infof("accounts have already been generated,skip")
+		return nil
+	}
+	return generateAccounts(num, dir)
+}
+
 type Action func(*metamask.Metamask) error
 
-func DoAllStep(dir string, cfg *cfg.Config, account db.Account) error {
+func DoAllStep(cfg *cfg.Config, account db.Account) error {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", false),
 		chromedp.Flag("disable-extensions", false),
 		chromedp.Flag("restore-on-startup", false),
 		chromedp.Flag("disable-web-security", true),
-		chromedp.Flag("load-extension", path.Join(dir, "ext")),
+		chromedp.Flag("load-extension", path.Join(cfg.Dir, "ext")),
 
 		//chromedp.UserDataDir(dataDir),
 	)
@@ -196,6 +218,38 @@ func gmxSwapCoin(meta *metamask.Metamask) error {
 	var gmxSwap = float64(10+n2) / 1000.
 	if err := gmx.SwapCoin("ETH", "USDT", gmxSwap); err != nil {
 		return errors.Wrap(err, "gmx swap coin")
+	}
+	return nil
+}
+
+func generateAccounts(num int, dir string) error {
+	for i := 0; i < num; i++ {
+		mnemonic, err := utils.NewMnemonic128()
+		if err != nil {
+			return err
+		}
+		a := db.Account{Mnemonic: mnemonic}
+		db.SaveAccount(&a)
+
+		opts := append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.Flag("headless", false),
+			chromedp.Flag("disable-extensions", false),
+			chromedp.Flag("restore-on-startup", false),
+			chromedp.Flag("disable-web-security", true),
+			chromedp.Flag("load-extension", path.Join(dir, "ext")),
+
+			//chromedp.UserDataDir(dataDir),
+		)
+
+		ctx, cancel1 := chromedp.NewContext(context.Background())
+
+		allocCtx, cancel2 := chromedp.NewExecAllocator(ctx, opts...)
+
+		meta := metamask.NewMetamask(allocCtx)
+
+		err = meta.FirstOpenAndImportAccount("qwer1234", a)
+		cancel1()
+		cancel2()
 	}
 	return nil
 }

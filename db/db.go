@@ -2,7 +2,6 @@ package db
 
 import (
 	"airdrop-bot/log"
-	"airdrop-bot/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"path"
@@ -62,17 +61,10 @@ func FindAccount(id int) Account {
 	return a
 }
 
-func GenerateAccounts(n int) error {
-	for i := 0; i < n; i++ {
-		mnemonic, err := utils.NewMnemonic128()
-		if err != nil {
-			return err
-		}
-
-		a := Account{Mnemonic: mnemonic}
-		SaveAccount(a)
-	}
-	return nil
+func AccountNum() int {
+	var c int64
+	DB.Model(&Account{}).Count(&c)
+	return int(c)
 }
 
 func UpdateAccountsByMnemonic(mnemonic, address string) {
@@ -84,9 +76,9 @@ func UpdateAccountsByMnemonic(mnemonic, address string) {
 	DB.Save(&a)
 }
 
-func SaveAccount(a Account) {
+func SaveAccount(a *Account) {
 	log.Debugf("save account with mnemonic: %s, address: %s", a.Mnemonic, a.Address)
-	DB.Save(&a)
+	DB.Save(a)
 }
 
 func GetOrAddIp(name string) StaticIp {
