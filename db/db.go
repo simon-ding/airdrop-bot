@@ -14,11 +14,10 @@ const (
 // Account 代表metamask里的一个账户，MetamaskIndex是必须的
 type Account struct {
 	gorm.Model
-	MetamaskIndex int    `json:"metamaskIndex"`
-	Mnemonic      string `json:"mnemonic"`
-	Address       string `json:"address"`
-	PrivateKey    string `json:"privateKey"`
-	Services      []StaticIpAccountRelation
+	Mnemonic   string `json:"mnemonic"`
+	Address    string `json:"address"`
+	PrivateKey string `json:"privateKey"`
+	Services   []StaticIpAccountRelation
 }
 
 // StaticIpAccountRelation 账户和ip的对应关系，Service为服务名称，如arbitrum等
@@ -77,7 +76,6 @@ func UpdateAccountsByMnemonic(mnemonic, address string) {
 }
 
 func SaveAccount(a *Account) {
-	log.Debugf("save account with mnemonic: %s, address: %s", a.Mnemonic, a.Address)
 	DB.Save(a)
 }
 
