@@ -33,8 +33,8 @@ func main() {
 	//if err != nil {
 	//	log.Errorf("get gas fee error: %v", err)
 	//}
-
 	//log.Infof("current gas fee is %+v", *fee)
+
 	dataDir := path.Join(dir, "data")
 	os.Mkdir(dataDir, 0777)
 	log.Infof("use chrome user dir: %v", dataDir)
@@ -46,7 +46,7 @@ func main() {
 }
 
 func do(dir string, cfg *cfg.Config) error {
-	lightsail, err := aws.CreateLightsailClient("", path.Join(dir, "aws.config"))
+	lightsail, err := aws.CreateLightsailClient("", path.Join(dir, "asserts", "aws.config"))
 	if err != nil {
 		return errors.Wrap(err, "create lightsail client")
 	}
