@@ -166,6 +166,7 @@ func DoAllStep(dir string, cfg *cfg.Config, account db.Account) error {
 		if err := act(meta); err != nil {
 			return err
 		}
+		delete(actions, n)
 	}
 
 	return nil
