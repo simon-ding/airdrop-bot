@@ -21,7 +21,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetConfigName("config") // name of config file (without extension)
 	viper.SetConfigType("yaml")   // REQUIRED if the config file does not have the extension in the name
 	viper.AddConfigPath(".")
-	viper.SetDefault("wallet-password", "")
+	viper.SetDefault("walletPassword", "")
 	viper.SetDefault("accountsPerIp", 3)
 
 	// optionally look for config in the working directory

@@ -1,9 +1,11 @@
 package db
 
 import (
-	"fmt"
+	"airdrop-bot/log"
+	"airdrop-bot/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"path"
 )
 
 const (
@@ -14,6 +16,7 @@ const (
 type Account struct {
 	gorm.Model
 	MetamaskIndex int    `json:"metamaskIndex"`
+	Mnemonic      string `json:"mnemonic"`
 	Address       string `json:"address"`
 	PrivateKey    string `json:"privateKey"`
 	Services      []StaticIpAccountRelation
@@ -35,28 +38,70 @@ type StaticIp struct {
 	Services []StaticIpAccountRelation `json:"services,omitempty"`
 }
 
-var db *gorm.DB
+var DB *gorm.DB
 
-func Open() {
+func Open(dir string) {
 
-	db1, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	db1, err := gorm.Open(sqlite.Open(path.Join(dir, "test.db")), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
-	db = db1
+	DB = db1
 
-	db.AutoMigrate(&Account{})
-	db.AutoMigrate(&StaticIpAccountRelation{})
-	db.AutoMigrate(&StaticIp{})
+	DB.AutoMigrate(&Account{})
+	DB.AutoMigrate(&StaticIpAccountRelation{})
+	DB.AutoMigrate(&StaticIp{})
 }
 
-func SaveNewAccount(metamaskIndex int, address, privateKey string) {
-	a := Account{
-		MetamaskIndex: metamaskIndex,
-		Address:       address,
-		PrivateKey:    privateKey,
+func FindAccount(id int) Account {
+	var a Account
+	DB.First(&a, id)
+	if a.ID == 0 {
+		log.Errorf("account with id %d not found", id)
 	}
-	db.Save(&a)
+	return a
+}
+
+func GenerateAccounts(n int) error {
+	for i := 0; i < n; i++ {
+		mnemonic, err := utils.NewMnemonic128()
+		if err != nil {
+			return err
+		}
+
+		a := Account{Mnemonic: mnemonic}
+		SaveAccount(a)
+	}
+	return nil
+}
+
+func UpdateAccountsByMnemonic(mnemonic, address string) {
+	var a Account
+	DB.Model(&Account{}).Where("mnemonic = ?", mnemonic).First(&a)
+	a.Mnemonic = mnemonic
+	a.Address = address
+	log.Debugf("update account to %+v", a)
+	DB.Save(&a)
+}
+
+func SaveAccount(a Account) {
+	log.Debugf("save account with mnemonic: %s, address: %s", a.Mnemonic, a.Address)
+	DB.Save(&a)
+}
+
+func GetOrAddIp(name string) StaticIp {
+	var ip StaticIp
+	DB.First(&ip, "name = ?", name)
+	if ip.ID == 0 {
+		log.Infof("ip of name %s not found, create one")
+		ip.Name = name
+		DB.Save(&ip)
+	}
+	return ip
+}
+
+func SaveAccountIpRelation(rel *StaticIpAccountRelation) {
+	DB.Save(rel)
 }
 
 func SaveNewIP(name string, ip string) {
@@ -64,38 +109,24 @@ func SaveNewIP(name string, ip string) {
 		Name: name,
 		Ip:   ip,
 	}
-	db.Save(&s)
+	DB.Save(&s)
 }
 
-func SaveIpAccountRelation(service string, metamaskID int, ipName string) error {
-	var a Account
-	db.First(&a, "metamaskIndex = ?", metamaskID)
-	if a.MetamaskIndex == 0 {
-		return fmt.Errorf("metamask account of id %d not found", metamaskID)
-	}
-	var ip StaticIp
-	db.First(&ip, "name = ?", ipName)
-	if ip.Name == "" {
-		return fmt.Errorf("static ip of name %s not found", ipName)
-	}
-
-	rel := StaticIpAccountRelation{
-		Service:    service,
-		AccountID:  a.ID,
-		StaticIpID: ip.ID,
-	}
-	db.Save(rel)
-	return nil
-}
-
-func IpRelatedAccountNum(service string, ipName string) int {
-	var ip StaticIp
-	db.First(&ip, "name = ?", ipName)
-	if ip.Name == "" {
-		return 0
-	}
+func IpRelatedAccountNum(service string, ipID uint) int {
 
 	var n int64
-	db.Model(&StaticIpAccountRelation{}).Where("staticIpID = ?", ip.ID).Count(&n)
+	DB.Model(&StaticIpAccountRelation{}).Where("static_ip_id = ? AND service= ?", ipID, service).Count(&n)
 	return int(n)
+}
+
+func AccountHasIp(service string, accountID uint) (*StaticIp, bool) {
+	var rel StaticIpAccountRelation
+	DB.Model(&StaticIpAccountRelation{}).Where("account_id = ? AND service= ?", accountID, service).First(&rel)
+	if rel.ID == 0 {
+		return nil, false
+	}
+	var ip StaticIp
+	DB.First(&ip, rel.StaticIpID)
+
+	return &ip, true
 }

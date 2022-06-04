@@ -1,12 +1,14 @@
 package metamask
 
 import (
+	"airdrop-bot/db"
 	"airdrop-bot/log"
 	"context"
 	"fmt"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -20,6 +22,7 @@ const (
 	avatarPos                = `//*[@id="app-content"]/div/div[1]/div/div[2]/div[2]/div`
 	accountExpandPos         = `//*[@id="app-content"]/div/div[3]/div/div/div/div[1]/button`
 	showLinkedSitesButtonPos = `//*[@id="popover-content"]/div[2]/button[3]`
+	accountDetail            = `//*[@id="popover-content"]/div[2]/button[2]`
 )
 
 func NewMetamask(ctx context.Context) *Metamask {
@@ -47,6 +50,57 @@ func (m *Metamask) Context() context.Context {
 
 func (m *Metamask) Done() {
 	m.cancel()
+}
+
+func (m *Metamask) FirstOpenAndImportAccount(walletPass string, a db.Account) error {
+
+	words := strings.Split(a.Mnemonic, " ")
+	if len(words) != 12 {
+		return fmt.Errorf("mnemonic word len is not 12")
+	}
+
+	beginButton := `//*[@id="app-content"]/div/div[2]/div/div/div/button`
+	importButton := `//*[@id="app-content"]/div/div[2]/div/div/div[2]/div/div[2]/div[1]/button`
+	agreeButton := `//*[@id="app-content"]/div/div[2]/div/div/div/div[5]/div[1]/footer/button[2]`
+	mnemonicInput := `//*[@id="import-srp__srp-word-%d"]`
+
+	chromedp.Run(m.ctx,
+		chromedp.Navigate(metaExtUrl),
+		chromedp.Click(beginButton),
+		chromedp.Click(importButton),
+		chromedp.Click(agreeButton),
+	)
+
+	firstPasswd := `//*[@id="password"]`
+	secondPasswd := `//*[@id="confirm-password"]`
+	tosCheckbox := `//*[@id="create-new-vault__terms-checkbox"]`
+	importButton2 := `//*[@id="app-content"]/div/div[2]/div/div/div[2]/form/button`
+	allDoneButton := `//*[@id="app-content"]/div/div[2]/div/div/button`
+	closeNewFeatureButton := `//*[@id="popover-content"]/div/div/section/div[1]/div/button`
+	addressPos := `//*[@id="app-content"]/div/span/div[1]/div/div/div/div[3]/div[2]/div/div/div[1]`
+	for i := 0; i < len(words); i++ {
+		mnemonicInput := fmt.Sprintf(mnemonicInput, i)
+		chromedp.Run(m.ctx,
+			chromedp.SendKeys(mnemonicInput, words[i]),
+		)
+	}
+
+	var address string
+	chromedp.Run(m.ctx,
+		chromedp.SendKeys(firstPasswd, walletPass),
+		chromedp.SendKeys(secondPasswd, walletPass),
+		chromedp.Click(tosCheckbox),
+		chromedp.Click(importButton2),
+		chromedp.Click(allDoneButton),
+		chromedp.Click(closeNewFeatureButton),
+		chromedp.Click(accountExpandPos),
+		chromedp.Click(accountDetail),
+		chromedp.TextContent(addressPos, &address),
+	)
+	if a.Address != address {
+		db.UpdateAccountsByMnemonic(a.Mnemonic, address)
+	}
+	return nil
 }
 
 func (m *Metamask) OpenAndLogin(passWd string) error {
@@ -208,6 +262,20 @@ func (m *Metamask) SignTransaction() error {
 	return chromedp.Run(m.ctx,
 		chromedp.Click(signButton),
 	)
+}
+
+func (m *Metamask) Balance() (float64, error) {
+	var s string
+	balancePos := `//*[@id="app-content"]/div/div[3]/div/div/div/div[2]/div/div[1]/div/div/div/div[1]/div/span[2]`
+	chromedp.Run(m.ctx,
+		chromedp.Navigate(metaExtUrl),
+		chromedp.TextContent(balancePos, &s),
+	)
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, errors.Wrap(err, "parse float")
+	}
+	return f, nil
 }
 
 func (m *Metamask) installMetaChromePlugin() error {

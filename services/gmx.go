@@ -6,7 +6,6 @@ import (
 	"airdrop-bot/utils"
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
@@ -40,7 +39,7 @@ func (g *Gmx) OpenAndLinkMeta() error {
 	return g.meta.ConfirmLinkAccount()
 }
 
-func (g *Gmx) SwapCoin(from, to string, amount *big.Float) error {
+func (g *Gmx) SwapCoin(from, to string, amount float64) error {
 	inputText := `//*[@id="root"]/div[1]/div/div/div[1]/div[2]/div[1]/div[1]/div[2]/div[2]/div[1]/input`
 	approve := `//*[@id="root"]/div[1]/div/div/div[1]/div[2]/div[1]/div[1]/div[6]/button`
 	fromCoin := `//*[@id="root"]/div[1]/div/div/div[1]/div[2]/div[1]/div[1]/div[2]/div[2]/div[2]/div/div`
@@ -113,7 +112,7 @@ func (g *Gmx) SwapCoin(from, to string, amount *big.Float) error {
 	}
 
 	chromedp.Run(g.ctx,
-		chromedp.SendKeys(inputText, amount.String()),
+		chromedp.SendKeys(inputText, fmt.Sprintf("%f", amount)),
 		chromedp.Click(approve),
 	)
 	return g.meta.ConfirmTransaction()

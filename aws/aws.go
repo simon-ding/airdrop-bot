@@ -3,6 +3,7 @@ package aws
 import (
 	"airdrop-bot/log"
 	"context"
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/lightsail"
 	"github.com/aws/aws-sdk-go-v2/service/lightsail/types"
@@ -70,4 +71,18 @@ func (c *Client) AttachIp(name string) error {
 	}
 	log.Infof("attach ip %s to instance %s success: %+v", name, c.instanceName, out)
 	return nil
+}
+
+func (c *Client) GetAttachedIp() (string, error) {
+	in := lightsail.GetStaticIpsInput{}
+	out, err := c.Client.GetStaticIps(context.TODO(), &in)
+	if err != nil {
+		return "", errors.Wrap(err, "get static ips")
+	}
+	for _, ip := range out.StaticIps {
+		if ip.IsAttached != nil && *ip.IsAttached {
+			return *ip.Name, err
+		}
+	}
+	return "", fmt.Errorf("no attached ip")
 }
