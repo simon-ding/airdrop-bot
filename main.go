@@ -198,9 +198,23 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 		1: gmxSwapCoin,
 	}
 
-	for len(actions) != 0 {
+	allNil := func(m map[int]Action) bool {
+		for _, v := range m {
+			if v != nil {
+				return false
+			}
+		}
+		return true
+	}
+
+	for !allNil(actions) {
 		n := rand.Intn(len(actions))
 		act := actions[n]
+		if act == nil {
+			continue
+		}
+
+		actions[n] = nil
 		var callback func()
 		if n == 0 {
 			if db.HasArbitrumStepRun(account.ID, db.StepAaveSupplyAndBorrow) {
@@ -223,8 +237,8 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 		if err := act(meta, callback); err != nil {
 			return err
 		}
-		delete(actions, n)
 	}
+	log.Infof("all steps have done")
 
 	return nil
 }
