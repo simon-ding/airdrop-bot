@@ -30,9 +30,11 @@ type Gmx struct {
 func (g *Gmx) OpenAndLinkMeta() error {
 	connectWallet := `//*[@id="root"]/div[1]/div/header/div[1]/div[2]/div/button`
 	mm := `//*[@id="root"]/div[4]/div[2]/div[3]/button[1]`
+	log.Infof("gmx link metamask wallet")
 
 	chromedp.Run(g.ctx,
 		chromedp.Navigate(gmxUrl),
+		chromedp.Sleep(2*time.Second),
 		chromedp.Click(connectWallet),
 		chromedp.Click(mm),
 	)
@@ -46,6 +48,7 @@ func (g *Gmx) SwapCoin(from, to string, amount float64) error {
 	fromTypes := `//*[@id="root"]/div[1]/div/div/div[1]/div[2]/div[1]/div[1]/div[2]/div[2]/div[2]/div/div[1]/div[2]/div[3]/div/div`
 	swapButton := `//*[@id="root"]/div[1]/div/div/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[3]`
 
+	log.Infof("try to use gmx swap %f %s to %s", amount, from, to)
 	var nodes []*cdp.Node
 	chromedp.Run(g.ctx,
 		chromedp.Reload(),

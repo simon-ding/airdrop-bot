@@ -150,6 +150,7 @@ func (m *Metamask) ConfirmLinkAccount(accounts ...int) error {
 	accountsPos := `//*[@id="app-content"]/div/div[2]/div/div[2]/div[2]/div[2]/div/div`
 	checkBoxPos := `//*[@id="app-content"]/div/div[2]/div/div[2]/div[2]/div[2]/div/div[%d]/div/input`
 
+	log.Infof("confirm link metamask wallet")
 	var nodes []*cdp.Node
 	chromedp.Run(m.ctx,
 		chromedp.Reload(),
@@ -185,6 +186,7 @@ func (m *Metamask) ConfirmLinkAccount(accounts ...int) error {
 func (m *Metamask) ConfirmAddNetwork() error {
 	approveButton := `//*[@id="app-content"]/div/div[2]/div/div[2]/div/button[2]`
 	switchNetwork := `//*[@id="app-content"]/div/div[2]/div/div[2]/div[2]/button[2]`
+	log.Infof("confirm add l2 network")
 	return chromedp.Run(m.ctx,
 		chromedp.Sleep(time.Second),
 		chromedp.Reload(),

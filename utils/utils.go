@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"airdrop-bot/log"
+	"airdrop-bot/metamask"
 	"bytes"
 	"context"
 	"fmt"
@@ -11,6 +13,7 @@ import (
 	"golang.org/x/text/transform"
 	"io/ioutil"
 	"math/rand"
+	"time"
 )
 
 func GbkToUtf8(s []byte) []byte {
@@ -60,4 +63,39 @@ func NewEthAccount() (string, string, string) {
 	account, _ := wallet.Derive(path, false)
 	PriKey, _ := wallet.PrivateKeyHex(account)
 	return mnemonic, account.Address.Hex(), PriKey
+}
+
+func OpenChanListAndAddNetwork(ctx context.Context, networkName string, meta *metamask.Metamask) error {
+	chanListUrl := `https://chainlist.org/zh`
+	ctx, cancel := chromedp.NewContext(ctx)
+	searchPos := `//*[@id="__next"]/div/main/div/div[2]/div[1]/div[1]/div/div/div/input`
+	addNetworkButton := `//*[@id="__next"]/div/main/div/div[2]/div[2]/div[1]/div[3]/button`
+	defer cancel()
+
+	linkWallet := `//*[@id="__next"]/div[1]/main/div/div[2]/div[1]/button`
+	log.Infof("try to open chanlist and add %s network", networkName)
+
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(chanListUrl),
+		chromedp.Click(linkWallet),
+		chromedp.Sleep(time.Second),
+	)
+	if err != nil {
+		return err
+	}
+	err = meta.ConfirmLinkAccount()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("link meta to chanlist success")
+	err = chromedp.Run(ctx,
+		chromedp.SendKeys(searchPos, networkName),
+		chromedp.Sleep(3*time.Second),
+		chromedp.Click(addNetworkButton),
+	)
+	if err != nil {
+		return err
+	}
+	return meta.ConfirmAddNetwork()
 }

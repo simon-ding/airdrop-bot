@@ -28,6 +28,7 @@ type Aave struct {
 func (a *Aave) OpenAndLinkMetaMask() error {
 	connectWallet := `//*[@id="wallet-button"]`
 	browserWallet := `/html/body/div[7]/div[3]/div[1]/button[1]`
+	log.Infof("aave open and link metamask")
 	chromedp.Run(a.ctx,
 		chromedp.Navigate(aaveUrl),
 		chromedp.WaitReady(connectWallet),
@@ -40,6 +41,8 @@ func (a *Aave) OpenAndLinkMetaMask() error {
 
 func (a *Aave) SupplyEth(amount float64) error {
 	asserts := `//*[@id="__next"]/main/div[2]/div/div[2]/div[1]/div[2]/div[3]/div`
+
+	log.Infof("aave supply %f eth", amount)
 	var nodes []*cdp.Node
 
 	chromedp.Run(a.ctx,

@@ -29,7 +29,7 @@ func main() {
 	db.Open(cfg.Dir)
 	log.Infof("db open success")
 	if cfg.XvfbMod() {
-		go exec.Command("Xvfb", ":1", "-screen", "0", "1920x1080x24").Run()
+		go exec.Command("Xvfb", ":1", "-screen", "0", "2048x1536x24").Run()
 		os.Setenv("DISPLAY", ":1")
 	}
 
@@ -159,12 +159,14 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 		chromedp.Flag("disable-extensions", false),
 		chromedp.Flag("restore-on-startup", false),
 		chromedp.Flag("disable-web-security", true),
+		chromedp.Flag("start-maximized", true),
 		chromedp.Flag("load-extension", path.Join(cfg.Dir, "ext")),
 
 		//chromedp.UserDataDir(dataDir),
 	)
 
-	ctx, cancel := chromedp.NewContext(context.Background())
+	ctx, cancel := chromedp.NewContext(context.Background(), chromedp.WithDebugf(log.Debugf), chromedp.WithLogf(log.Infof),
+		chromedp.WithErrorf(log.Errorf))
 	defer cancel()
 
 	allocCtx, cancel := chromedp.NewExecAllocator(ctx, opts...)
@@ -259,6 +261,7 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 }
 
 func aaveSupplyAndBorrowMoney(meta *metamask.Metamask, callback func()) error {
+	log.Infof("run aave supply and borrow money")
 	aave := services.NewAave(meta.Context(), meta)
 	if err := aave.OpenAndLinkMetaMask(); err != nil {
 		return errors.Wrap(err, "aave link metamask")
@@ -278,6 +281,7 @@ func aaveSupplyAndBorrowMoney(meta *metamask.Metamask, callback func()) error {
 }
 
 func gmxSwapCoin(meta *metamask.Metamask, callback func()) error {
+	log.Infof("run gmx swap coin")
 	gmx := services.NewGmx(meta.Context(), meta)
 	if err := gmx.OpenAndLinkMeta(); err != nil {
 		return errors.Wrap(err, "gmx link metamask")

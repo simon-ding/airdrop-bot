@@ -3,6 +3,7 @@ package services
 import (
 	"airdrop-bot/log"
 	"airdrop-bot/metamask"
+	"airdrop-bot/utils"
 	"context"
 	"fmt"
 	"github.com/chromedp/chromedp"
@@ -49,21 +50,30 @@ func (a *Arbitrum) Deposit(amount float64) error {
 }
 
 func (a *Arbitrum) AddL2NetworkAndWaitTransaction() error {
-	l2Network := `//*[@id="root"]/div/div[1]/header/div/div/div[2]/button[1]`
-	chromedp.Run(a.ctx,
-		chromedp.Sleep(5*time.Second),
-		chromedp.WaitReady(l2Network),
-		chromedp.Click(l2Network),
-		chromedp.Sleep(5*time.Second),
-	)
+	//l2Network := `//button[@class="mr-4 text-white hover:text-navy hover:bg-gray-200 cursor-pointer z-50 rounded-md text-sm font-medium"]`
 	log.Infof("adding arbitrum l2 network")
 
-	err := a.meta.ConfirmAddNetwork()
-	if err != nil {
+	//chromedp.Run(a.ctx,
+	//	utils.CdpPrint("111"),
+	//	chromedp.Navigate(arbitrumBridgeUrl),
+	//	utils.CdpPrint("222"),
+	//	chromedp.Sleep(5*time.Second),
+	//	utils.CdpPrint("333"),
+	//
+	//	chromedp.WaitReady(l2Network),
+	//	utils.CdpPrint("444"),
+	//
+	//	chromedp.Click(l2Network),
+	//	utils.CdpPrint("555"),
+	//
+	//	chromedp.Sleep(5*time.Second),
+	//)
+	if err := utils.OpenChanListAndAddNetwork(a.ctx, "arbitrum", a.meta); err != nil {
 		return err
 	}
+
 	for {
-		time.Sleep(10 * time.Second)
+		time.Sleep(3 * time.Second)
 		balance, err := a.meta.Balance()
 		if err != nil {
 			return err
