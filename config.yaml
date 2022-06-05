@@ -1,6 +1,7 @@
 walletPassword: "qwer1234"
 accountsToGen: 50
 chromeMode: xvfb
+dir: ./asserts
 owlracle:
   apiKey: 2c5058dcf17a4dc9a8826f9aaee46c7b
   apiSecret: 80e2f652f87049ae96e9416d81813da2

@@ -44,9 +44,6 @@ func main() {
 	//	return
 	//}
 
-	dataDir := path.Join(cfg.Dir, "data")
-	os.Mkdir(dataDir, 0777)
-	log.Infof("use chrome user dir: %v", dataDir)
 	if err := do(cfg); err != nil {
 		log.Errorf("do error: %v", err)
 		return
@@ -58,7 +55,7 @@ func do(cfg *cfg.Config) error {
 
 	FirstRunGenAccount(cfg.AccountsToGen)
 
-	lightsail, err := aws.CreateLightsailClient("airdrop-ubuntu-1", path.Join(cfg.Dir, "asserts", "aws.config"))
+	lightsail, err := aws.CreateLightsailClient("airdrop-ubuntu-1", path.Join(cfg.Dir, "aws.config"))
 	if err != nil {
 		return errors.Wrap(err, "create lightsail client")
 	}
