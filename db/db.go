@@ -146,3 +146,14 @@ func AccountHasIp(service string, accountID uint) (*StaticIp, bool) {
 
 	return &ip, true
 }
+
+func SaveOrUpdateIp(name, address string) {
+	var ip StaticIp
+	DB.First(&ip, "name = ?", name)
+	if ip.ID == 0 || ip.Ip != address {
+		//not found or need update
+		ip.Name = name
+		ip.Ip = address
+		DB.Save(&ip)
+	}
+}

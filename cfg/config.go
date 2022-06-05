@@ -6,12 +6,22 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	ChromeModXvfb = "xvfb"
+)
+
 type Config struct {
 	WalletPassword string   `mapstructure:"walletPassword"`
 	AccountsPerIp  int      `mapstructure:"accountsPerIp"`
 	AccountsToGen  int      `mapstructure:"accountsToGen"`
+	RunSingleStep  bool     `mapstructure:"runSingleStep"`
 	Owlracle       Owlracle `mapstructure:"owlracle"`
 	Dir            string   `mapstructure:"dir"`
+	ChromeMode     string   `json:"chromeMode"`
+}
+
+func (c *Config) XvfbMod() bool {
+	return c.ChromeMode == ChromeModXvfb
 }
 
 type Owlracle struct {

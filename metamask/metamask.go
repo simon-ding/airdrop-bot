@@ -185,6 +185,7 @@ func (m *Metamask) ConfirmAddNetwork() error {
 	approveButton := `//*[@id="app-content"]/div/div[2]/div/div[2]/div/button[2]`
 	switchNetwork := `//*[@id="app-content"]/div/div[2]/div/div[2]/div[2]/button[2]`
 	return chromedp.Run(m.ctx,
+		chromedp.Sleep(time.Second),
 		chromedp.Reload(),
 		chromedp.Click(approveButton),
 		chromedp.Sleep(time.Second),

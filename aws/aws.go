@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"airdrop-bot/db"
 	"airdrop-bot/log"
 	"context"
 	"fmt"
@@ -16,7 +17,7 @@ func CreateLightsailClient(instanceName, cfgDir string) (*Client, error) {
 		config.WithSharedConfigFiles(
 			[]string{cfgDir},
 		),
-		config.WithRegion(string(types.RegionNameApSoutheast1)),
+		config.WithRegion(string(types.RegionNameUsWest2)),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "load aws config")
@@ -85,4 +86,16 @@ func (c *Client) GetAttachedIp() (string, error) {
 		}
 	}
 	return "", fmt.Errorf("no attached ip")
+}
+
+func (c *Client) GetAllIps() {
+	in := lightsail.GetStaticIpsInput{}
+	out, err := c.Client.GetStaticIps(context.TODO(), &in)
+	if err != nil {
+		return
+	}
+	for _, ip := range out.StaticIps {
+		db.SaveOrUpdateIp(*ip.Name, *ip.IpAddress)
+	}
+
 }

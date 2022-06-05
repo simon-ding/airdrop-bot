@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path"
 	"time"
 )
@@ -27,6 +28,10 @@ func main() {
 
 	db.Open(cfg.Dir)
 	log.Infof("db open success")
+	if cfg.XvfbMod() {
+		go exec.Command("Xvfb", ":1", "-screen", "0", "1920x1080x24")
+		os.Setenv("DISPLAY", ":1")
+	}
 
 	//fee, err := utils.GetGasFee(&cfg.Owlracle)
 	//if err != nil {
@@ -53,7 +58,7 @@ func do(cfg *cfg.Config) error {
 
 	FirstRunGenAccount(cfg.AccountsToGen)
 
-	lightsail, err := aws.CreateLightsailClient("", path.Join(cfg.Dir, "asserts", "aws.config"))
+	lightsail, err := aws.CreateLightsailClient("airdrop-ubuntu-1", path.Join(cfg.Dir, "asserts", "aws.config"))
 	if err != nil {
 		return errors.Wrap(err, "create lightsail client")
 	}
@@ -77,12 +82,14 @@ func do(cfg *cfg.Config) error {
 			ip2 := db.GetOrAddIp(attachedIpName)
 			count := db.IpRelatedAccountNum(db.ArbitrumService, ip2.ID)
 			if count >= cfg.AccountsPerIp { //当前ip超过允许的最大数量，换新的ip
-				if err := lightsail.DetachIp(ip.Name); err != nil {
-					return errors.Wrap(err, "lightsail detach ip")
-				}
+
 				newIpName := "airdrop_bot_" + utils.RandStringRunes(4)
 				if err := lightsail.CreateIp(newIpName); err != nil {
 					return errors.Wrap(err, "create ip")
+				}
+
+				if err := lightsail.DetachIp(attachedIpName); err != nil {
+					return errors.Wrap(err, "lightsail detach ip")
 				}
 				newIp := db.GetOrAddIp(newIpName) //save new ip to db
 				rel := db.StaticIpAccountRelation{
@@ -181,16 +188,22 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 	}
 	const depositReverse = 0.005
 
+	var stepCount int
 	if !db.HasArbitrumStepRun(account.ID, db.StepArbitrumDeposit) {
 		err = arb.Deposit(balance - depositReverse)
 		if err != nil {
 			return errors.Wrap(err, "arb deposit")
 		}
+		stepCount++
 		db.SaveArbitrumStep(account.ID, db.StepArbitrumDeposit)
 	}
 
 	if err := arb.AddL2NetworkAndWaitTransaction(); err != nil {
 		return errors.Wrap(err, "add l2 network")
+	}
+	if cfg.RunSingleStep && stepCount > 0 {
+		log.Infof("run single step mode, exiting")
+		return nil
 	}
 
 	actions := map[int]Action{
@@ -236,6 +249,11 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 		}
 		if err := act(meta, callback); err != nil {
 			return err
+		}
+		stepCount++
+		if cfg.RunSingleStep && stepCount > 0 {
+			log.Infof("run single step mode, exiting")
+			return nil
 		}
 	}
 	log.Infof("all steps have done")

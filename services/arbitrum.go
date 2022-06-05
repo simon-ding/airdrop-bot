@@ -53,7 +53,7 @@ func (a *Arbitrum) AddL2NetworkAndWaitTransaction() error {
 		chromedp.Sleep(5*time.Second),
 		chromedp.WaitReady(l2Network),
 		chromedp.Click(l2Network),
-		chromedp.Sleep(time.Second),
+		chromedp.Sleep(5*time.Second),
 	)
 	log.Infof("adding arbitrum l2 network")
 
