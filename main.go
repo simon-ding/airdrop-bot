@@ -29,7 +29,7 @@ func main() {
 	db.Open(cfg.Dir)
 	log.Infof("db open success")
 	if cfg.XvfbMod() {
-		go exec.Command("Xvfb", ":1", "-screen", "0", "1920x1080x24")
+		go exec.Command("Xvfb", ":1", "-screen", "0", "1920x1080x24").Run()
 		os.Setenv("DISPLAY", ":1")
 	}
 
@@ -179,7 +179,7 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 		return err
 	}
 	balance, err := meta.Balance()
-	log.Info(balance)
+	log.Infof("account %s current balance is %v", account.Address, balance)
 
 	arb := services.NewArbitrum(meta.Context(), meta)
 	err = arb.LinkMetaMask()

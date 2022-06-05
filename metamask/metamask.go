@@ -53,7 +53,7 @@ func (m *Metamask) Done() {
 }
 
 func (m *Metamask) FirstOpenAndImportAccount(walletPass string, a db.Account) error {
-
+	log.Infof("begin open metamask and import account")
 	words := strings.Split(a.Mnemonic, " ")
 	if len(words) != 12 {
 		return fmt.Errorf("mnemonic word len is not 12")
@@ -100,6 +100,7 @@ func (m *Metamask) FirstOpenAndImportAccount(walletPass string, a db.Account) er
 	if a.Address != address {
 		db.UpdateAccountsByMnemonic(a.Mnemonic, address)
 	}
+	log.Infof("import account done")
 	return nil
 }
 

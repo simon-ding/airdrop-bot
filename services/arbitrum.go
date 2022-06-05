@@ -29,6 +29,7 @@ type Arbitrum struct {
 }
 
 func (a *Arbitrum) Deposit(amount float64) error {
+	log.Infof("run arbitrum deposit")
 	err := chromedp.Run(a.ctx,
 		chromedp.Navigate(arbitrumBridgeUrl),
 		chromedp.SendKeys(input, fmt.Sprintf("%f", amount)),

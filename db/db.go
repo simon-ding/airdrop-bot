@@ -109,7 +109,7 @@ func GetOrAddIp(name string) StaticIp {
 	var ip StaticIp
 	DB.First(&ip, "name = ?", name)
 	if ip.ID == 0 {
-		log.Infof("ip of name %s not found, create one")
+		log.Infof("ip of name %s not found, create one", name)
 		ip.Name = name
 		DB.Save(&ip)
 	}
