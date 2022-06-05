@@ -267,7 +267,7 @@ func (m *Metamask) ConfirmTransaction() error {
 	confirmButton := `//button[@data-testid='page-container-footer-next']`
 	log.Infof("confirm metamask transaction")
 	return chromedp.Run(m.ctx,
-		chromedp.Sleep(time.Second),
+		chromedp.Sleep(5*time.Second),
 		chromedp.Reload(),
 		chromedp.WaitEnabled(confirmButton),
 		chromedp.Click(confirmButton),

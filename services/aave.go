@@ -31,6 +31,7 @@ func (a *Aave) OpenAndLinkMetaMask() error {
 	log.Infof("aave open and link metamask")
 	chromedp.Run(a.ctx,
 		chromedp.Navigate(aaveUrl),
+		chromedp.Sleep(5*time.Second),
 		chromedp.WaitReady(connectWallet),
 		chromedp.Sleep(2*time.Second),
 		chromedp.Click(connectWallet),
@@ -77,28 +78,43 @@ func (a *Aave) BorrowMoney(coinType string, amount float64) error {
 	availableCurrency := `//*[@id="__next"]/main/div[2]/div/div[2]/div[2]/div[2]/div[3]/div`
 	types := `//*[@id="__next"]/main/div[2]/div/div[2]/div[2]/div[2]/div[3]/div[%d]/div[1]/a/p`
 	borrowButton := `//*[@id="__next"]/main/div[2]/div/div[2]/div[2]/div[2]/div[3]/div[%d]/div[5]/button`
-	borrowDialog := `/html/body/div[8]/div[3]/div[1]/div[2]/div[1]/div[1]/input`
-	confirmBorrow := `/html/body/div[8]/div[3]/div[4]/button`
+	borrowDialog := `/html/body/div[7]/div[3]/div[1]/div[2]/div[1]/div[1]/input`
+	confirmBorrow := `/html/body/div[7]/div[3]/div[4]/button`
+
+	log.Infof("aave borrow %f %s", amount, coinType)
 	var nodes []*cdp.Node
 	chromedp.Run(a.ctx,
-		chromedp.Nodes(&availableCurrency, &nodes),
+		chromedp.Reload(),
+		chromedp.Nodes(availableCurrency, &nodes),
 	)
+	log.Debugf("column %d", len(nodes))
 
 	//0 is the header
-	for i := 0; i < len(nodes); i++ {
+	for i := 1; i < len(nodes); i++ {
 		var t string
 		chromedp.Run(a.ctx,
 			chromedp.TextContent(fmt.Sprintf(types, i+1), &t),
 		)
+		log.Infof("coin type: %s", t)
 		if t == coinType {
 			chromedp.Run(a.ctx,
 				chromedp.Click(fmt.Sprintf(borrowButton, i+1)),
+				chromedp.Sleep(5*time.Second),
 				chromedp.SendKeys(borrowDialog, fmt.Sprintf("%f", amount)),
+
+				chromedp.Sleep(2*time.Second),
+				chromedp.WaitEnabled(confirmBorrow),
+
 				chromedp.Click(confirmBorrow),
 			)
-			log.Infof("borrow coin %s of amount %d", coinType, amount)
+			log.Infof("borrow coin %s of amount %f", coinType, amount)
 
-			return a.meta.ConfirmTransaction()
+			err := a.meta.ConfirmTransaction()
+			if err != nil {
+				return err
+			}
+			time.Sleep(10 * time.Second)
+			return nil
 		}
 	}
 	return fmt.Errorf("no coin of type %s found", coinType)

@@ -29,7 +29,9 @@ func main() {
 	db.Open(cfg.Dir)
 	log.Infof("db open success")
 	if cfg.XvfbMod() {
-		go exec.Command("Xvfb", ":1", "-screen", "0", "2048x1536x24").Run()
+		res := "1920x1080x24"
+		log.Infof("xvfb mode, run xvfb %s...", res)
+		go exec.Command("Xvfb", ":1", "-screen", "0", res).Run()
 		os.Setenv("DISPLAY", ":1")
 	}
 
@@ -159,8 +161,8 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 		chromedp.Flag("disable-extensions", false),
 		chromedp.Flag("restore-on-startup", false),
 		chromedp.Flag("disable-web-security", true),
-		chromedp.Flag("start-maximized", true),
 		chromedp.Flag("load-extension", path.Join(cfg.Dir, "ext")),
+		chromedp.Flag("window-size", "1920,1080"),
 
 		//chromedp.UserDataDir(dataDir),
 	)
