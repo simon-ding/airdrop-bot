@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
+	"time"
 )
 
 const aaveUrl = `https://app.aave.com/?marketName=proto_arbitrum_v3`
@@ -29,6 +30,8 @@ func (a *Aave) OpenAndLinkMetaMask() error {
 	browserWallet := `/html/body/div[7]/div[3]/div[1]/button[1]`
 	chromedp.Run(a.ctx,
 		chromedp.Navigate(aaveUrl),
+		chromedp.WaitReady(connectWallet),
+		chromedp.Sleep(2*time.Second),
 		chromedp.Click(connectWallet),
 		chromedp.Click(browserWallet),
 	)
@@ -45,8 +48,8 @@ func (a *Aave) SupplyEth(amount float64) error {
 
 	coinType := `//*[@id="__next"]/main/div[2]/div/div[2]/div[1]/div[2]/div[3]/div[%d]/div[1]/a/p`
 	supplyButton := `//*[@id="__next"]/main/div[2]/div/div[2]/div[1]/div[2]/div[3]/div[%d]/div[5]/button`
-	moneyInput := `/html/body/div[8]/div[3]/div[1]/div[2]/div[1]/div[1]/input`
-	approveSupply := `/html/body/div[8]/div[3]/div[4]/button[1]`
+	moneyInput := `//input[@aria-label='amount input']`
+	approveSupply := `//button[@class="MuiButton-root MuiButton-contained MuiButton-containedPrimary MuiButton-sizeLarge MuiButton-containedSizeLarge MuiButton-disableElevation MuiButtonBase-root  css-2xbd8y"]`
 	// 0 is the header
 	for i := 1; i < len(nodes); i++ {
 		var t string
@@ -60,7 +63,7 @@ func (a *Aave) SupplyEth(amount float64) error {
 				chromedp.Click(approveSupply),
 			)
 
-			a.meta.SignTransaction()
+			a.meta.ConfirmTransaction()
 
 		}
 	}

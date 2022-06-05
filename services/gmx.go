@@ -48,8 +48,7 @@ func (g *Gmx) SwapCoin(from, to string, amount float64) error {
 
 	var nodes []*cdp.Node
 	chromedp.Run(g.ctx,
-		chromedp.Navigate(gmxUrl),
-
+		chromedp.Reload(),
 		chromedp.WaitReady(`//*[@id="headlessui-menu-button-3"]/button`),
 		chromedp.Click(swapButton),
 
@@ -81,7 +80,7 @@ func (g *Gmx) SwapCoin(from, to string, amount float64) error {
 	toCoinTypes := `//*[@id="root"]/div[1]/div/div/div[1]/div[2]/div[1]/div[1]/div[4]/div[2]/div[2]/div/div[1]/div[2]/div[3]/div/div`
 	var nodes1 []*cdp.Node
 	chromedp.Run(g.ctx,
-		chromedp.Sleep(2*time.Second),
+		chromedp.Sleep(5*time.Second),
 		utils.CdpPrint("111"),
 		chromedp.Click(listToCoins),
 		utils.CdpPrint("222"),
@@ -111,9 +110,12 @@ func (g *Gmx) SwapCoin(from, to string, amount float64) error {
 		return fmt.Errorf("to coin type not found: %s", to)
 	}
 
+	confirmSwapButton := `//button[@class="App-cta Confirmation-box-button"]`
 	chromedp.Run(g.ctx,
+		chromedp.Sleep(time.Second),
 		chromedp.SendKeys(inputText, fmt.Sprintf("%f", amount)),
 		chromedp.Click(approve),
+		chromedp.Click(confirmSwapButton),
 	)
 	return g.meta.ConfirmTransaction()
 }

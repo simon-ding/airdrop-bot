@@ -13,6 +13,7 @@ import (
 const arbitrumBridgeUrl = `https://bridge.arbitrum.io/`
 const input = `//*[@id="root"]/div/main/div/div/div[4]/div[1]/div[1]/div/div[2]/div/input`
 const depositButton = `//*[@id="root"]/div/main/div/div/div[4]/button`
+const confirmMove = `//*[@id="headlessui-dialog-13"]/div/div[2]/div[2]/button[1]`
 
 func NewArbitrum(ctx context.Context, meta *metamask.Metamask) *Arbitrum {
 	ctx1, _ := chromedp.NewContext(ctx)
@@ -28,7 +29,6 @@ type Arbitrum struct {
 }
 
 func (a *Arbitrum) Deposit(amount float64) error {
-	confirmMove := `//*[@id="headlessui-dialog-13"]/div/div[2]/div[2]/button[1]`
 	err := chromedp.Run(a.ctx,
 		chromedp.Navigate(arbitrumBridgeUrl),
 		chromedp.SendKeys(input, fmt.Sprintf("%f", amount)),
@@ -44,20 +44,34 @@ func (a *Arbitrum) Deposit(amount float64) error {
 		return errors.Wrap(err, "meta confirm transaction")
 	}
 	log.Infof("deposit %f eth to arb success, waiting for transaction ends...", amount)
+	return nil
+}
 
-	depositStatus := `//*[@id="root"]/div/main/div/div/div[5]/div/div/div/div/table/tbody/tr/td[2]/span`
+func (a *Arbitrum) AddL2NetworkAndWaitTransaction() error {
+	l2Network := `//*[@id="root"]/div/div[1]/header/div/div/div[2]/button[1]`
+	chromedp.Run(a.ctx,
+		chromedp.Sleep(5*time.Second),
+		chromedp.WaitReady(l2Network),
+		chromedp.Click(l2Network),
+		chromedp.Sleep(time.Second),
+	)
+	log.Infof("adding arbitrum l2 network")
+
+	err := a.meta.ConfirmAddNetwork()
+	if err != nil {
+		return err
+	}
 	for {
-		var status string
-		chromedp.Run(a.ctx,
-			chromedp.Reload(),
-			chromedp.TextContent(depositStatus, &status),
-		)
-		if status == "success" {
-			log.Infof("transaction success ends")
+		time.Sleep(10 * time.Second)
+		balance, err := a.meta.Balance()
+		if err != nil {
+			return err
+		}
+		if balance > 0 {
+			log.Infof("transaction ends, now l2 balance is: %v", balance)
 			break
 		}
-		log.Debugf("current transaction status: %v", status)
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second) //wait transaction end
 	}
 	return nil
 }

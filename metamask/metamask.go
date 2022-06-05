@@ -181,6 +181,17 @@ func (m *Metamask) ConfirmLinkAccount(accounts ...int) error {
 	)
 }
 
+func (m *Metamask) ConfirmAddNetwork() error {
+	approveButton := `//*[@id="app-content"]/div/div[2]/div/div[2]/div/button[2]`
+	switchNetwork := `//*[@id="app-content"]/div/div[2]/div/div[2]/div[2]/button[2]`
+	return chromedp.Run(m.ctx,
+		chromedp.Reload(),
+		chromedp.Click(approveButton),
+		chromedp.Sleep(time.Second),
+		chromedp.Click(switchNetwork),
+	)
+}
+
 func (m *Metamask) SwitchAccount(n int) error {
 	acc := fmt.Sprintf(accountPos, n)
 	return chromedp.Run(m.ctx,
@@ -249,15 +260,18 @@ func (m *Metamask) SwitchNetwork(net string) error {
 }
 
 func (m *Metamask) ConfirmTransaction() error {
-	confirmButton := `//*[@id="app-content"]/div/div[3]/div/div[4]/div[4]/footer/button[2]`
+	confirmButton := `//button[@data-testid='page-container-footer-next']`
 	log.Infof("confirm metamask transaction")
 	return chromedp.Run(m.ctx,
+		chromedp.Sleep(time.Second),
 		chromedp.Reload(),
+		chromedp.WaitEnabled(confirmButton),
 		chromedp.Click(confirmButton),
 	)
 }
 
 func (m *Metamask) SignTransaction() error {
+	log.Infof("begin sign transaction")
 	signButton := `//*[@id="app-content"]/div/div[3]/div/div[4]/button[2]`
 	return chromedp.Run(m.ctx,
 		chromedp.Click(signButton),
@@ -266,7 +280,7 @@ func (m *Metamask) SignTransaction() error {
 
 func (m *Metamask) Balance() (float64, error) {
 	var s string
-	balancePos := `//*[@id="app-content"]/div/div[3]/div/div/div/div[2]/div/div[1]/div/div/div/div[1]/div/span[2]`
+	balancePos := `//span[@class='currency-display-component__text']`
 	chromedp.Run(m.ctx,
 		chromedp.Navigate(metaExtUrl),
 		chromedp.TextContent(balancePos, &s),

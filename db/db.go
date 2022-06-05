@@ -18,6 +18,7 @@ type Account struct {
 	Address    string `json:"address"`
 	PrivateKey string `json:"privateKey"`
 	Services   []StaticIpAccountRelation
+	Steps      []StepRun
 }
 
 // StaticIpAccountRelation 账户和ip的对应关系，Service为服务名称，如arbitrum等
@@ -26,6 +27,13 @@ type StaticIpAccountRelation struct {
 	Service    string `json:"service,omitempty"`
 	AccountID  uint   `json:"accountID,omitempty"`
 	StaticIpID uint   `json:"staticIpID,omitempty"`
+}
+
+type StepRun struct {
+	gorm.Model
+	Service   string
+	Step      string
+	AccountID uint
 }
 
 // StaticIp 代表aws分配的一个ip，它可以和metamask里的一个或多个账号绑定
@@ -49,6 +57,7 @@ func Open(dir string) {
 	DB.AutoMigrate(&Account{})
 	DB.AutoMigrate(&StaticIpAccountRelation{})
 	DB.AutoMigrate(&StaticIp{})
+	DB.AutoMigrate(&StepRun{})
 }
 
 func FindAccount(id int) Account {
@@ -64,6 +73,23 @@ func AccountNum() int {
 	var c int64
 	DB.Model(&Account{}).Count(&c)
 	return int(c)
+}
+
+func SaveArbitrumStep(accountID uint, step string) {
+	s := StepRun{
+		Service:   ArbitrumService,
+		Step:      step,
+		AccountID: accountID,
+	}
+	log.Infof("arbitrum service step %s has done", step)
+	DB.Save(&s)
+}
+
+func HasArbitrumStepRun(accountID uint, step string) bool {
+	var c int64
+	DB.Model(&StepRun{}).Where("account_id = ? AND step = ? AND service = ?", accountID, step, ArbitrumService).
+		Count(&c)
+	return c > 0
 }
 
 func UpdateAccountsByMnemonic(mnemonic, address string) {

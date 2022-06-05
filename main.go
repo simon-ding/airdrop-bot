@@ -28,11 +28,11 @@ func main() {
 	db.Open(cfg.Dir)
 	log.Infof("db open success")
 
-	fee, err := utils.GetGasFee(&cfg.Owlracle)
-	if err != nil {
-		log.Errorf("get gas fee error: %v", err)
-	}
-	log.Infof("current estimated gas fee is %+v", fee.Speeds[1].EstimatedFee)
+	//fee, err := utils.GetGasFee(&cfg.Owlracle)
+	//if err != nil {
+	//	log.Errorf("get gas fee error: %v", err)
+	//}
+	//log.Infof("current estimated gas fee is %+v", fee.Speeds[1].EstimatedFee)
 
 	//if fee.Speeds[1].EstimatedFee > 7 {
 	//	log.Error("gas fee too high")
@@ -130,11 +130,11 @@ func do(cfg *cfg.Config) error {
 
 func FirstRunGenAccount(num int) {
 	accountNum := db.AccountNum()
-	if accountNum != 0 {
+	if accountNum == num {
 		log.Infof("accounts have already been generated,skip")
 		return
 	}
-	for i := 0; i < num; i++ {
+	for i := 0; i < num-accountNum; i++ {
 		mnemonic, address, priKey := utils.NewEthAccount()
 		a := db.Account{
 			Mnemonic:   mnemonic,
@@ -147,7 +147,7 @@ func FirstRunGenAccount(num int) {
 	}
 }
 
-type Action func(*metamask.Metamask) error
+type Action func(*metamask.Metamask, func()) error
 
 func DoAllStep(cfg *cfg.Config, account db.Account) error {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -181,19 +181,46 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 	}
 	const depositReverse = 0.005
 
-	err = arb.Deposit(balance - depositReverse)
-	if err != nil {
-		return errors.Wrap(err, "arb deposit")
+	if !db.HasArbitrumStepRun(account.ID, db.StepArbitrumDeposit) {
+		err = arb.Deposit(balance - depositReverse)
+		if err != nil {
+			return errors.Wrap(err, "arb deposit")
+		}
+		db.SaveArbitrumStep(account.ID, db.StepArbitrumDeposit)
 	}
+
+	if err := arb.AddL2NetworkAndWaitTransaction(); err != nil {
+		return errors.Wrap(err, "add l2 network")
+	}
+
 	actions := map[int]Action{
-		1: aaveSupplyAndBorrowMoney,
-		2: gmxSwapCoin,
+		0: aaveSupplyAndBorrowMoney,
+		1: gmxSwapCoin,
 	}
 
 	for len(actions) != 0 {
 		n := rand.Intn(len(actions))
 		act := actions[n]
-		if err := act(meta); err != nil {
+		var callback func()
+		if n == 0 {
+			if db.HasArbitrumStepRun(account.ID, db.StepAaveSupplyAndBorrow) {
+				log.Infof("arbitrum supply and borrow has run, skip it")
+				continue
+			}
+			callback = func() {
+				db.SaveArbitrumStep(account.ID, db.StepAaveSupplyAndBorrow)
+			}
+		} else if n == 1 {
+			if db.HasArbitrumStepRun(account.ID, db.StepGmxSwap) {
+				log.Infof("arbitrum gmx swap has run, skip it")
+				continue
+			}
+
+			callback = func() {
+				db.SaveArbitrumStep(account.ID, db.StepGmxSwap)
+			}
+		}
+		if err := act(meta, callback); err != nil {
 			return err
 		}
 		delete(actions, n)
@@ -202,7 +229,7 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 	return nil
 }
 
-func aaveSupplyAndBorrowMoney(meta *metamask.Metamask) error {
+func aaveSupplyAndBorrowMoney(meta *metamask.Metamask, callback func()) error {
 	aave := services.NewAave(meta.Context(), meta)
 	if err := aave.OpenAndLinkMetaMask(); err != nil {
 		return errors.Wrap(err, "aave link metamask")
@@ -217,16 +244,21 @@ func aaveSupplyAndBorrowMoney(meta *metamask.Metamask) error {
 	if err := aave.BorrowMoney("USDT", float64(aaveBorrowUsdt)); err != nil {
 		return errors.Wrap(err, "borrow money")
 	}
+	callback()
 	return nil
 }
 
-func gmxSwapCoin(meta *metamask.Metamask) error {
+func gmxSwapCoin(meta *metamask.Metamask, callback func()) error {
 	gmx := services.NewGmx(meta.Context(), meta)
+	if err := gmx.OpenAndLinkMeta(); err != nil {
+		return errors.Wrap(err, "gmx link metamask")
+	}
 	n2 := rand.Intn(5)
 	var gmxSwap = float64(10+n2) / 1000.
 	if err := gmx.SwapCoin("ETH", "USDT", gmxSwap); err != nil {
 		return errors.Wrap(err, "gmx swap coin")
 	}
+	callback()
 	return nil
 }
 
