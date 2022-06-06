@@ -10,6 +10,7 @@ var sugar *zap.SugaredLogger
 func init() {
 	config := zap.NewDevelopmentConfig()
 	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	config.DisableStacktrace = true
 	logger, _ := config.Build(zap.AddCallerSkip(1))
 	sugar = logger.Sugar()
 }

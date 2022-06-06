@@ -35,17 +35,6 @@ func main() {
 		os.Setenv("DISPLAY", ":1")
 	}
 
-	//fee, err := utils.GetGasFee(&cfg.Owlracle)
-	//if err != nil {
-	//	log.Errorf("get gas fee error: %v", err)
-	//}
-	//log.Infof("current estimated gas fee is %+v", fee.Speeds[1].EstimatedFee)
-
-	//if fee.Speeds[1].EstimatedFee > 7 {
-	//	log.Error("gas fee too high")
-	//	return
-	//}
-
 	if err := do(cfg); err != nil {
 		log.Errorf("do error: %v", err)
 		return
@@ -153,9 +142,36 @@ func FirstRunGenAccount(num int) {
 	}
 }
 
+func isGasFeeAccepted(cfg *cfg.Config) bool {
+	fee, err := utils.GetGasFee(&cfg.Owlracle)
+	if err != nil {
+		log.Errorf("get gas fee error: %v", err)
+	}
+	if len(fee.Speeds) == 0 {
+		log.Infof("api return no fee: %+v", fee)
+		return false
+	}
+	log.Infof("current gas fee is %+v", fee.Speeds)
+
+	if fee.Speeds[1].EstimatedFee > 7 {
+		log.Errorf("gas fee too high: %v", fee.Speeds[1].EstimatedFee)
+		return false
+	}
+	return true
+}
+
 type Action func(*metamask.Metamask, func()) error
 
 func DoAllStep(cfg *cfg.Config, account db.Account) error {
+	log.Infof("---- [START] begin doing transactions of account %d ----", account.ID)
+	if db.HasArbitrumStepAllRun(account.ID) {
+		log.Infof("arbitrum steps have all been run, skip account...")
+		return nil
+	}
+	if cfg.RunSingleStep {
+		log.Infof("single step mode enabled, will only run one step")
+	}
+
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", false),
 		chromedp.Flag("disable-extensions", false),
@@ -166,6 +182,15 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 
 		//chromedp.UserDataDir(dataDir),
 	)
+
+	for {
+		if isGasFeeAccepted(cfg) {
+			log.Infof("gas fee is accepted, continue")
+			break
+		}
+		log.Infof("will try again in 5min")
+		time.Sleep(5 * time.Minute)
+	}
 
 	ctx, cancel := chromedp.NewContext(context.Background(), chromedp.WithDebugf(log.Debugf), chromedp.WithLogf(log.Infof),
 		chromedp.WithErrorf(log.Errorf))
@@ -189,22 +214,21 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 	}
 	const depositReverse = 0.005
 
-	var stepCount int
 	if !db.HasArbitrumStepRun(account.ID, db.StepArbitrumDeposit) {
 		err = arb.Deposit(balance - depositReverse)
 		if err != nil {
 			return errors.Wrap(err, "arb deposit")
 		}
-		stepCount++
+
+		if cfg.RunSingleStep {
+			log.Infof("run single step mode, exiting")
+			return nil
+		}
 		db.SaveArbitrumStep(account.ID, db.StepArbitrumDeposit)
 	}
 
 	if err := arb.AddL2NetworkAndWaitTransaction(); err != nil {
 		return errors.Wrap(err, "add l2 network")
-	}
-	if cfg.RunSingleStep && stepCount > 0 {
-		log.Infof("run single step mode, exiting")
-		return nil
 	}
 
 	actions := map[int]Action{
@@ -251,8 +275,7 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 		if err := act(meta, callback); err != nil {
 			return err
 		}
-		stepCount++
-		if cfg.RunSingleStep && stepCount > 0 {
+		if cfg.RunSingleStep {
 			log.Infof("run single step mode, exiting")
 			return nil
 		}

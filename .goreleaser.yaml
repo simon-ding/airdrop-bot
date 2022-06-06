@@ -1,8 +1,8 @@
 builds:
-- id: airdrop-bot-linux-amd64
-  env:
-  - CGO_ENABLED=1
-  goos:
-    - linux
-  goarch:
-    - amd64    
+  - id: airdrop-bot-linux-amd64
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+    goarch:
+      - amd64

@@ -92,6 +92,11 @@ func HasArbitrumStepRun(accountID uint, step string) bool {
 	return c > 0
 }
 
+func HasArbitrumStepAllRun(accountID uint) bool {
+	return HasArbitrumStepRun(accountID, StepArbitrumDeposit) && HasArbitrumStepRun(accountID, StepAaveSupplyAndBorrow) &&
+		HasArbitrumStepRun(accountID, StepGmxSwap)
+}
+
 func UpdateAccountsByMnemonic(mnemonic, address string) {
 	var a Account
 	DB.Model(&Account{}).Where("mnemonic = ?", mnemonic).First(&a)

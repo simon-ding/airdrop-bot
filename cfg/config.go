@@ -17,7 +17,8 @@ type Config struct {
 	RunSingleStep  bool     `mapstructure:"runSingleStep"`
 	Owlracle       Owlracle `mapstructure:"owlracle"`
 	Dir            string   `mapstructure:"dir"`
-	ChromeMode     string   `json:"chromeMode"`
+	ChromeMode     string   `mapstructure:"chromeMode"`
+	GasFeeAccepted int      `mapstructure:"gasFeeAccepted"`
 }
 
 func (c *Config) XvfbMod() bool {
@@ -36,6 +37,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("walletPassword", "")
 	viper.SetDefault("accountsPerIp", 3)
 	viper.SetDefault("dir", ".")
+	viper.SetDefault("gasFeeAccepted", 7)
 
 	// optionally look for config in the working directory
 	var cfg Config
