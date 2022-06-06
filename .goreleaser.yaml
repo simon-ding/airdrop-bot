@@ -1,4 +1,4 @@
-build:
+builds:
 - id: airdrop-bot-linux-amd64
   env:
   - CGO_ENABLED=1
