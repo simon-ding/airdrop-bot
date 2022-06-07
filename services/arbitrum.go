@@ -12,8 +12,8 @@ import (
 )
 
 const arbitrumBridgeUrl = `https://bridge.arbitrum.io/`
-const input = `//*[@id="root"]/div/main/div/div/div[4]/div[1]/div[1]/div/div[2]/div/input`
-const depositButton = `//*[@id="root"]/div/main/div/div/div[4]/button`
+const input = `//input[@placeholder='Enter amount here']`
+const depositButton = `//button[text()='Deposit']`
 const confirmMove = `//*[@id="headlessui-dialog-13"]/div/div[2]/div[2]/button[1]`
 
 func NewArbitrum(ctx context.Context, meta *metamask.Metamask) *Arbitrum {
