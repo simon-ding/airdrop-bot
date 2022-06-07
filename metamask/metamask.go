@@ -184,8 +184,8 @@ func (m *Metamask) ConfirmLinkAccount(accounts ...int) error {
 }
 
 func (m *Metamask) ConfirmAddNetwork() error {
-	approveButton := `//*[@id="app-content"]/div/div[2]/div/div[2]/div/button[2]`
-	switchNetwork := `//*[@id="app-content"]/div/div[2]/div/div[2]/div[2]/button[2]`
+	approveButton := `//button[text()='Approve']`
+	switchNetwork := `//button[text()='Switch network']`
 	log.Infof("confirm add l2 network")
 	return chromedp.Run(m.ctx,
 		chromedp.Sleep(time.Second),
@@ -294,6 +294,22 @@ func (m *Metamask) Balance() (float64, error) {
 		return 0, errors.Wrap(err, "parse float")
 	}
 	return f, nil
+}
+
+func (m *Metamask) WaitForBalanceChange(ori float64) float64 {
+	for {
+		log.Infof("checking balance")
+		balance1, err := m.Balance()
+		if err != nil {
+			log.Errorf("check balance error: %v", err)
+			continue
+		}
+		if ori != balance1 {
+			log.Infof("balance has now changed, now balance is %v", balance1)
+			return balance1
+		}
+		time.Sleep(2 * time.Second)
+	}
 }
 
 func (m *Metamask) installMetaChromePlugin() error {

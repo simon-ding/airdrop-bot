@@ -30,9 +30,10 @@ type Arbitrum struct {
 }
 
 func (a *Arbitrum) Deposit(amount float64) error {
-	log.Infof("run arbitrum deposit")
+	log.Infof("run arbitrum deposit: %v", amount)
 	err := chromedp.Run(a.ctx,
 		chromedp.Navigate(arbitrumBridgeUrl),
+		chromedp.Sleep(5*time.Second),
 		chromedp.SendKeys(input, fmt.Sprintf("%f", amount)),
 		chromedp.Sleep(1*time.Second),
 		chromedp.WaitEnabled(depositButton),
@@ -68,9 +69,10 @@ func (a *Arbitrum) AddL2NetworkAndWaitTransaction() error {
 	//
 	//	chromedp.Sleep(5*time.Second),
 	//)
-	if err := utils.OpenChanListAndAddNetwork(a.ctx, "arbitrum", a.meta); err != nil {
+	if err := utils.OpenChanListAndAddNetwork(a.ctx, "Arbitrum One", a.meta); err != nil {
 		return err
 	}
+	log.Infof("checking l2 balance")
 
 	for {
 		time.Sleep(3 * time.Second)
@@ -78,6 +80,7 @@ func (a *Arbitrum) AddL2NetworkAndWaitTransaction() error {
 		if err != nil {
 			return err
 		}
+		log.Infof("now l2 balance is %v", balance)
 		if balance > 0 {
 			log.Infof("transaction ends, now l2 balance is: %v", balance)
 			break

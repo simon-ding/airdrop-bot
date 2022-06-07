@@ -28,6 +28,7 @@ func (c *Config) XvfbMod() bool {
 type Owlracle struct {
 	ApiKey    string `mapstructure:"apiKey"`
 	ApiSecret string `mapstructure:"apiSecret"`
+	Disable   bool   `mapstructure:"disable"`
 }
 
 func LoadConfig() (*Config, error) {

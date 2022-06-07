@@ -68,7 +68,7 @@ func NewEthAccount() (string, string, string) {
 func OpenChanListAndAddNetwork(ctx context.Context, networkName string, meta *metamask.Metamask) error {
 	chanListUrl := `https://chainlist.org/zh`
 	ctx, cancel := chromedp.NewContext(ctx)
-	searchPos := `//*[@id="__next"]/div/main/div/div[2]/div[1]/div[1]/div/div/div/input`
+	searchPos := `//input[@placeholder="ETH, Fantom, ..."]`
 	addNetworkButton := `//*[@id="__next"]/div/main/div/div[2]/div[2]/div[1]/div[3]/button`
 	defer cancel()
 

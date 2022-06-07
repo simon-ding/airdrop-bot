@@ -39,7 +39,6 @@ func main() {
 		log.Errorf("do error: %v", err)
 		return
 	}
-	time.Sleep(time.Minute)
 }
 
 func do(cfg *cfg.Config) error {
@@ -146,6 +145,7 @@ func isGasFeeAccepted(cfg *cfg.Config) bool {
 	fee, err := utils.GetGasFee(&cfg.Owlracle)
 	if err != nil {
 		log.Errorf("get gas fee error: %v", err)
+		return false
 	}
 	if len(fee.Speeds) == 0 {
 		log.Infof("api return no fee: %+v", fee)
@@ -183,13 +183,15 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 		//chromedp.UserDataDir(dataDir),
 	)
 
-	for {
-		if isGasFeeAccepted(cfg) {
-			log.Infof("gas fee is accepted, continue")
-			break
+	if !cfg.Owlracle.Disable {
+		for {
+			if isGasFeeAccepted(cfg) {
+				log.Infof("gas fee is acceptable, continue")
+				break
+			}
+			log.Infof("will try again in 5min")
+			time.Sleep(5 * time.Minute)
 		}
-		log.Infof("will try again in 5min")
-		time.Sleep(5 * time.Minute)
 	}
 
 	ctx, cancel := chromedp.NewContext(context.Background(), chromedp.WithDebugf(log.Debugf), chromedp.WithLogf(log.Infof),
@@ -219,12 +221,13 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 		if err != nil {
 			return errors.Wrap(err, "arb deposit")
 		}
+		db.SaveArbitrumStep(account.ID, db.StepArbitrumDeposit)
 
+		balance = meta.WaitForBalanceChange(balance)
 		if cfg.RunSingleStep {
 			log.Infof("run single step mode, exiting")
 			return nil
 		}
-		db.SaveArbitrumStep(account.ID, db.StepArbitrumDeposit)
 	}
 
 	if err := arb.AddL2NetworkAndWaitTransaction(); err != nil {
@@ -267,7 +270,6 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 				log.Infof("arbitrum gmx swap has run, skip it")
 				continue
 			}
-
 			callback = func() {
 				db.SaveArbitrumStep(account.ID, db.StepGmxSwap)
 			}
@@ -275,6 +277,7 @@ func DoAllStep(cfg *cfg.Config, account db.Account) error {
 		if err := act(meta, callback); err != nil {
 			return err
 		}
+		balance = meta.WaitForBalanceChange(balance)
 		if cfg.RunSingleStep {
 			log.Infof("run single step mode, exiting")
 			return nil
