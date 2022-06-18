@@ -16,3 +16,4 @@
 data/
 ext/
 *.db
+aws.config
