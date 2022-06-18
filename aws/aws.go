@@ -74,18 +74,18 @@ func (c *Client) AttachIp(name string) error {
 	return nil
 }
 
-func (c *Client) GetAttachedIp() (string, error) {
+func (c *Client) GetAttachedIp() (string, string, error) {
 	in := lightsail.GetStaticIpsInput{}
 	out, err := c.Client.GetStaticIps(context.TODO(), &in)
 	if err != nil {
-		return "", errors.Wrap(err, "get static ips")
+		return "", "", errors.Wrap(err, "get static ips")
 	}
 	for _, ip := range out.StaticIps {
 		if ip.IsAttached != nil && *ip.IsAttached {
-			return *ip.Name, err
+			return *ip.Name, *ip.IpAddress, err
 		}
 	}
-	return "", fmt.Errorf("no attached ip")
+	return "", "", fmt.Errorf("no attached ip")
 }
 
 func (c *Client) GetAllIps() {

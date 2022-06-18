@@ -11,18 +11,34 @@ const (
 )
 
 type Config struct {
-	WalletPassword string   `mapstructure:"walletPassword"`
-	AccountsPerIp  int      `mapstructure:"accountsPerIp"`
-	AccountsToGen  int      `mapstructure:"accountsToGen"`
-	RunSingleStep  bool     `mapstructure:"runSingleStep"`
-	Owlracle       Owlracle `mapstructure:"owlracle"`
-	Dir            string   `mapstructure:"dir"`
-	ChromeMode     string   `mapstructure:"chromeMode"`
-	GasFeeAccepted int      `mapstructure:"gasFeeAccepted"`
+	WalletPassword   string     `mapstructure:"walletPassword"`
+	AccountsPerIp    int        `mapstructure:"accountsPerIp"`
+	AccountsToGen    int        `mapstructure:"accountsToGen"`
+	RunSingleStep    bool       `mapstructure:"runSingleStep"`
+	Owlracle         Owlracle   `mapstructure:"owlracle"`
+	Dir              string     `mapstructure:"dir"`
+	ChromeMode       string     `mapstructure:"chromeMode"`
+	GasFeeAcceptable int        `mapstructure:"gasFeeAcceptable"`
+	Cloudflare       Cloudflare `mapstructure:"cloudflare"`
+	AWS              AWS        `mapstructure:"aws"`
 }
 
 func (c *Config) XvfbMod() bool {
 	return c.ChromeMode == ChromeModXvfb
+}
+
+type AWS struct {
+	AccessKeyID     string `mapstructure:"accessKeyID"`
+	SecretAccessKey string `mapstructure:"secretAccessKey"`
+	InstanceName    string `mapstructure:"instanceName"`
+}
+
+type Cloudflare struct {
+	ApiKey    string `mapstructure:"apiKey"`
+	ZoneId    string `mapstructure:"zoneId"`
+	KvId      string `mapstructure:"kvId"`
+	AccountId string `mapstructure:"accountId"`
+	URL       string `mapstructure:"url"`
 }
 
 type Owlracle struct {
@@ -38,7 +54,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("walletPassword", "")
 	viper.SetDefault("accountsPerIp", 3)
 	viper.SetDefault("dir", ".")
-	viper.SetDefault("gasFeeAccepted", 7)
+	viper.SetDefault("gasFeeAcceptable", 7)
 
 	// optionally look for config in the working directory
 	var cfg Config

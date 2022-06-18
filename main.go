@@ -1,14 +1,17 @@
 package main
 
 import (
+	"airdrop-bot/asserts"
 	"airdrop-bot/aws"
 	"airdrop-bot/cfg"
 	"airdrop-bot/db"
 	"airdrop-bot/log"
 	"airdrop-bot/metamask"
+	server2 "airdrop-bot/server"
 	"airdrop-bot/services"
 	"airdrop-bot/utils"
 	"context"
+	"flag"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
 	"math/rand"
@@ -18,13 +21,28 @@ import (
 	"time"
 )
 
+var accounts = flag.String("accounts", "", "accounts: 1-30  1")
+
 func main() {
 
+	flag.Parse()
 	cfg, err := cfg.LoadConfig()
 	if err != nil {
 		log.Panicf("read config: %v", err)
 	}
 	log.Info("read config success")
+	awsDir := path.Join(cfg.Dir, "aws.config")
+	err = aws.WriteAwsConfig(cfg.AWS.AccessKeyID, cfg.AWS.SecretAccessKey, awsDir)
+	if err != nil {
+		log.Errorf("write aws config error: %v", err)
+		return
+	}
+
+	err = utils.Unzip(asserts.Ext, path.Join(cfg.Dir, "ext"))
+	if err != nil {
+		log.Errorf("unzip extension error: %v", err)
+		return
+	}
 
 	db.Open(cfg.Dir)
 	log.Infof("db open success")
@@ -35,8 +53,14 @@ func main() {
 		os.Setenv("DISPLAY", ":1")
 	}
 
-	if err := do(cfg); err != nil {
-		log.Errorf("do error: %v", err)
+	server, err := server2.NewServer(cfg)
+	if err != nil {
+		log.Errorf("new server: %v", err)
+		return
+	}
+	err = server.BridgeAccounts(*accounts)
+	if err != nil {
+		log.Errorf("bridge accounts: %v", err)
 		return
 	}
 }
@@ -57,7 +81,7 @@ func do(cfg *cfg.Config) error {
 			continue
 		}
 
-		attachedIpName, err := lightsail.GetAttachedIp()
+		attachedIpName, _, err := lightsail.GetAttachedIp()
 		if err != nil {
 			return errors.Wrap(err, "get attached static ip")
 		}
