@@ -50,6 +50,33 @@ func (a *Arbitrum) Deposit(amount float64) error {
 	return nil
 }
 
+func (a *Arbitrum) DepositUsingHop(amount float64) error {
+	url := `https://app.hop.exchange/#/send?token=ETH&destNetwork=arbitrum&sourceNetwork=ethereum`
+	ctx, cancel := chromedp.NewContext(a.ctx)
+	defer cancel()
+	input := `//input[@class='MuiInputBase-root MuiInput-root jss91 jss94 MuiInputBase-formControl MuiInput-formControl MuiInputBase-adornedEnd']`
+	sendButton := `//button[@class="MuiButtonBase-root MuiButton-root MuiButton-text jss23 jss112 jss58"]`
+	sendButton2 := `//button[@class="MuiButtonBase-root MuiButton-root MuiButton-text jss23 jss166 jss163"]`
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(url),
+		chromedp.Sleep(5*time.Second),
+		chromedp.SendKeys(input, fmt.Sprintf("%f", amount)),
+		chromedp.Sleep(time.Second),
+		chromedp.Click(sendButton),
+		chromedp.Click(sendButton2),
+	)
+	if err != nil {
+		return err
+	}
+	if err := a.meta.ConfirmTransaction(); err != nil {
+		return errors.Wrap(err, "meta confirm transaction")
+	}
+	t := 2 * time.Minute
+	log.Infof("deposit %f eth to arb (using hop) success, wait %v", amount, t)
+	time.Sleep(t)
+	return nil
+}
+
 func (a *Arbitrum) AddL2NetworkAndWaitTransaction() error {
 	//l2Network := `//button[@class="mr-4 text-white hover:text-navy hover:bg-gray-200 cursor-pointer z-50 rounded-md text-sm font-medium"]`
 	log.Infof("adding arbitrum l2 network")
