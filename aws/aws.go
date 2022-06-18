@@ -7,17 +7,17 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/lightsail"
-	"github.com/aws/aws-sdk-go-v2/service/lightsail/types"
 	"github.com/pkg/errors"
 )
 
-func CreateLightsailClient(instanceName, cfgDir string) (*Client, error) {
+func CreateLightsailClient(instanceName, region, cfgDir string) (*Client, error) {
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithSharedConfigFiles(
 			[]string{cfgDir},
 		),
-		config.WithRegion(string(types.RegionNameUsWest2)),
+		//types.RegionNameUsWest2
+		config.WithRegion(region),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "load aws config")

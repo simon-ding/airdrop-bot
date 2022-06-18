@@ -69,7 +69,7 @@ func do(cfg *cfg.Config) error {
 
 	FirstRunGenAccount(cfg.AccountsToGen)
 
-	lightsail, err := aws.CreateLightsailClient("airdrop-ubuntu-1", path.Join(cfg.Dir, "aws.config"))
+	lightsail, err := aws.CreateLightsailClient("airdrop-ubuntu-1", "", path.Join(cfg.Dir, "aws.config"))
 	if err != nil {
 		return errors.Wrap(err, "create lightsail client")
 	}

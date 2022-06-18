@@ -31,6 +31,7 @@ type AWS struct {
 	AccessKeyID     string `mapstructure:"accessKeyID"`
 	SecretAccessKey string `mapstructure:"secretAccessKey"`
 	InstanceName    string `mapstructure:"instanceName"`
+	Region          string `mapstructure:"region"`
 }
 
 type Cloudflare struct {

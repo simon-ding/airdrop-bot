@@ -25,7 +25,7 @@ func NewServer(cfg *cfg.Config) (*Server, error) {
 		return nil, err
 	}
 
-	lightsail, err := aws.CreateLightsailClient(cfg.AWS.InstanceName, path.Join(cfg.Dir, "aws.config"))
+	lightsail, err := aws.CreateLightsailClient(cfg.AWS.InstanceName, cfg.AWS.Region, path.Join(cfg.Dir, "aws.config"))
 	if err != nil {
 		return nil, errors.Wrap(err, "create lightsail client")
 	}
@@ -133,7 +133,7 @@ func (s *Server) BridgeOne(a db.Account) error {
 	const depositReverse = 0.005
 
 	if !db.HasArbitrumStepRun(a.ID, db.StepArbitrumDeposit) {
-		err = arb.Deposit(balance - depositReverse)
+		err = arb.DepositUsingHop(balance - depositReverse)
 		if err != nil {
 			return errors.Wrap(err, "arb deposit")
 		}
