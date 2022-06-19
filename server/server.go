@@ -68,12 +68,27 @@ func (s *Server) BridgeAccounts(accounts string) error {
 			return errors.Errorf("format error")
 		}
 		for i := startInt; i < endInt+1; i++ {
+			account := db.FindAccount(i)
+			if account.ID == 0 {
+				log.Errorf("accounts with id %d not found in db, skip it", i+1)
+				continue
+			}
+			if err := s.bridgeOne(account); err != nil {
+				log.Errorf("bridge account %d error: %v", account.ID, err)
+				return err
+			}
+		}
+
+	}
+	if accounts == "" {
+		// all accounts
+		for i := 0; i < s.cfg.AccountsToGen; i++ {
 			account := db.FindAccount(i + 1)
 			if account.ID == 0 {
 				log.Errorf("accounts with id %d not found in db, skip it", i+1)
 				continue
 			}
-			if err := s.BridgeOne(account); err != nil {
+			if err := s.bridgeOne(account); err != nil {
 				log.Errorf("bridge account %d error: %v", account.ID, err)
 				return err
 			}
@@ -83,10 +98,15 @@ func (s *Server) BridgeAccounts(accounts string) error {
 	return nil
 }
 
-func (s *Server) BridgeOne(a db.Account) error {
-	err := s.AttachOrAllocateAccountIp(a)
+func (s *Server) bridgeOne(a db.Account) error {
+
+	//if db.HasArbitrumStepRun(a.ID, db.StepArbitrumDeposit) {
+	//	log.Infof("account %d bridge has already been done,, skip", a.ID)
+	//	return nil
+	//}
+	err := s.attachOrAllocateAccountIp(a)
 	if err != nil {
-		return errors.Wrap(err, "AttachOrAllocateAccountIp")
+		return errors.Wrap(err, "attachOrAllocateAccountIp")
 	}
 
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -125,31 +145,30 @@ func (s *Server) BridgeOne(a db.Account) error {
 	balance, err := meta.Balance()
 	log.Infof("account %s current balance is %v", a.Address, balance)
 
-	arb := services.NewArbitrum(meta.Context(), meta)
-	err = arb.LinkMetaMask()
+	err = meta.OpenChanListAndAddNetwork("Optimism")
+	if err != nil {
+		return errors.Wrap(err, "add op")
+	}
+
+	hop := services.MewHop(meta.Context(), meta, "ETH", "optimism", "arbitrum")
+	err = hop.LinkMetaMask()
 	if err != nil {
 		return err
 	}
-	const depositReverse = 0.005
+	log.Infof("hop link metamask success")
 
-	if !db.HasArbitrumStepRun(a.ID, db.StepArbitrumDeposit) {
-		err = arb.DepositUsingHop(balance - depositReverse)
-		if err != nil {
-			return errors.Wrap(err, "arb deposit")
-		}
-		db.SaveArbitrumStep(a.ID, db.StepArbitrumDeposit)
-
-		balance = meta.WaitForBalanceChange(balance)
-		if s.cfg.RunSingleStep {
-			log.Infof("run single step mode, exiting")
-			return nil
-		}
+	err = hop.BridgeMoney(balance - cfg.BridgeReverse)
+	if err != nil {
+		return errors.Wrap(err, "arb deposit")
 	}
+	db.SaveArbitrumStep(a.ID, db.StepArbitrumDeposit)
+
+	balance = meta.WaitForBalanceChange(balance)
 	return nil
 
 }
 
-func (s *Server) AttachOrAllocateAccountIp(a db.Account) error {
+func (s *Server) attachOrAllocateAccountIp(a db.Account) error {
 	attachedIpName, _, err := s.lightsail.GetAttachedIp()
 	if err != nil {
 		return errors.Wrap(err, "get attached static ip")
@@ -425,6 +444,7 @@ func (s *Server) FirstRunGenAccount() {
 		log.Infof("accounts have already been generated,skip")
 		return
 	}
+	log.Infof("try to generate %d accounts", num-accountNum)
 	for i := 0; i < num-accountNum; i++ {
 		mnemonic, address, priKey := utils.NewEthAccount()
 		a := db.Account{

@@ -296,6 +296,41 @@ func (m *Metamask) Balance() (float64, error) {
 	return f, nil
 }
 
+func (m *Metamask) OpenChanListAndAddNetwork(networkName string) error {
+	chanListUrl := `https://chainlist.org/zh`
+	ctx, cancel := chromedp.NewContext(m.ctx)
+	searchPos := `//input[@placeholder="ETH, Fantom, ..."]`
+	addNetworkButton := `//*[@id="__next"]/div/main/div/div[2]/div[2]/div[1]/div[3]/button`
+	defer cancel()
+
+	linkWallet := `//*[@id="__next"]/div[1]/main/div/div[2]/div[1]/button`
+	log.Infof("try to open chanlist and add %s network", networkName)
+
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(chanListUrl),
+		chromedp.Click(linkWallet),
+		chromedp.Sleep(time.Second),
+	)
+	if err != nil {
+		return err
+	}
+	err = m.ConfirmLinkAccount()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("link meta to chanlist success")
+	err = chromedp.Run(ctx,
+		chromedp.SendKeys(searchPos, networkName),
+		chromedp.Sleep(3*time.Second),
+		chromedp.Click(addNetworkButton),
+	)
+	if err != nil {
+		return err
+	}
+	return m.ConfirmAddNetwork()
+}
+
 func (m *Metamask) WaitForBalanceChange(ori float64) float64 {
 	for {
 		log.Infof("checking balance")
