@@ -21,6 +21,7 @@ type Config struct {
 	GasFeeAcceptable int        `mapstructure:"gasFeeAcceptable"`
 	Cloudflare       Cloudflare `mapstructure:"cloudflare"`
 	AWS              AWS        `mapstructure:"aws"`
+	Binance          Binance    `mapstructure:"binance"`
 }
 
 func (c *Config) XvfbMod() bool {
@@ -46,6 +47,11 @@ type Owlracle struct {
 	ApiKey    string `mapstructure:"apiKey"`
 	ApiSecret string `mapstructure:"apiSecret"`
 	Disable   bool   `mapstructure:"disable"`
+}
+
+type Binance struct {
+	ApiKey    string `mapstructure:"apiKey"`
+	SecretKey string `mapstructure:"secretKey"`
 }
 
 func LoadConfig() (*Config, error) {

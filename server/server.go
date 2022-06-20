@@ -2,6 +2,7 @@ package server
 
 import (
 	"airdrop-bot/aws"
+	"airdrop-bot/binance"
 	"airdrop-bot/cfg"
 	"airdrop-bot/cloudflare"
 	"airdrop-bot/db"
@@ -29,11 +30,13 @@ func NewServer(cfg *cfg.Config) (*Server, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "create lightsail client")
 	}
+	bn := binance.New(&cfg.Binance)
 
 	return &Server{
 		cfg:       cfg,
 		cf:        cf,
 		lightsail: lightsail,
+		bn:        bn,
 	}, nil
 }
 
@@ -43,6 +46,7 @@ type Server struct {
 	cfg       *cfg.Config
 	cf        *cloudflare.Client
 	lightsail *aws.Client
+	bn        *binance.Binance
 }
 
 type Para struct {
@@ -509,5 +513,37 @@ func (s *Server) gmxSwapCoin(meta *metamask.Metamask, callback func()) error {
 		return errors.Wrap(err, "gmx swap coin")
 	}
 	callback()
+	return nil
+}
+
+func (s *Server) TransferEthToAccounts() error {
+	balance, err := s.bn.EthBalance()
+	if err != nil {
+		return errors.Wrap(err, "get balance")
+	}
+	bb, err := strconv.ParseFloat(balance, 64)
+	if err != nil {
+		return errors.Wrap(err, "parse float")
+	}
+
+	var accounts []db.Account
+	db.DB.Find(&accounts)
+	perAccount := bb / float64(len(accounts))
+
+	p := perAccount
+	for p < 1 {
+		p *= 10
+	}
+	p = p / perAccount * 10
+
+	for _, a := range accounts {
+		r := float64(rand.Intn(10)-5)/p + perAccount - 1/(p*10)
+
+		err := s.bn.WithdrawEth(a.Address, r)
+		if err != nil {
+			log.Errorf("transfer to account %v error: %v", a.Address, err)
+			continue
+		}
+	}
 	return nil
 }

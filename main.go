@@ -16,6 +16,7 @@ import (
 
 var accounts = flag.String("accounts", "", "accounts: 1-30  1")
 var genAccounts = flag.Bool("genAccounts", false, "-genAccounts")
+var transferEth = flag.Bool("transfer", false, "transfer eth from binance to accounts")
 
 func main() {
 
@@ -52,6 +53,14 @@ func main() {
 		log.Errorf("new server: %v", err)
 		return
 	}
+
+	if *transferEth {
+		err := server.TransferEthToAccounts()
+		if err != nil {
+			log.Errorf("transfer eth error: %v", err)
+		}
+	}
+
 	if *genAccounts {
 		server.FirstRunGenAccount()
 	}
