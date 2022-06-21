@@ -4,6 +4,7 @@ import (
 	"airdrop-bot/cfg"
 	"airdrop-bot/log"
 	"github.com/robfig/cron/v3"
+	"time"
 )
 
 func main() {
@@ -21,4 +22,7 @@ func main() {
 		}
 	})
 	c.Start()
+	for {
+		time.Sleep(time.Hour)
+	}
 }
