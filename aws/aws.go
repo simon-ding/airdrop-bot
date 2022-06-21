@@ -23,10 +23,6 @@ func CreateLightsailClient(instanceName, region, cfgDir string) (*Client, error)
 		return nil, errors.Wrap(err, "load aws config")
 	}
 	client := lightsail.NewFromConfig(cfg)
-
-	outputs, err := client.GetStaticIps(context.TODO(), &lightsail.GetStaticIpsInput{})
-
-	log.Info(outputs, err)
 	c := &Client{Client: client, instanceName: instanceName}
 	return c, nil
 }

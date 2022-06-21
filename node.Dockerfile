@@ -10,22 +10,18 @@ WORKDIR /app
 COPY . .
 
 # 指定OS等，并go build
-RUN GOOS=linux GOARCH=amd64 go build .
+RUN GOOS=linux GOARCH=amd64 go build ./cmd/node-runner
 
-FROM ubuntu
+FROM ubuntu:22.04
 
 WORKDIR /app
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \ 
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
     && echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list
 RUN apt-get update && apt-get -y install google-chrome-stable xvfb
 
 # 将上一个阶段publish文件夹下的所有文件复制进来
-COPY --from=builder /app/publish .
+COPY --from=builder /app/node-runner .
 
-# 指定运行时环境变量
-ENV GIN_MODE=release \
-    PORT=80
+EXPOSE 8080
 
-EXPOSE 80
-
-ENTRYPOINT ["./toc-generator"]
+ENTRYPOINT ["./node-runner"]

@@ -1,9 +1,11 @@
 package db
 
 import (
+	"airdrop-bot/cfg"
 	"airdrop-bot/log"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"math/rand"
 	"path"
 )
 
@@ -11,7 +13,7 @@ const (
 	ArbitrumService = "arbitrum"
 )
 
-// Account 代表metamask里的一个账户，MetamaskIndex是必须的
+// Account 代表metamask里的一个账户
 type Account struct {
 	gorm.Model
 	Mnemonic   string `json:"mnemonic"`
@@ -34,14 +36,36 @@ type StepRun struct {
 	Service   string
 	Step      string
 	AccountID uint
+	Status    Status
+	Reason    string
 }
+
+type Status int
+
+const (
+	StatusPending Status = iota
+	StatusRunning
+	StatusSuccess
+	StatusFailed
+)
 
 // StaticIp 代表aws分配的一个ip，它可以和metamask里的一个或多个账号绑定
 type StaticIp struct {
 	gorm.Model
 	Name     string                    `json:"name,omitempty"`
 	Ip       string                    `json:"ip,omitempty"`
+	NodeName string                    `json:"nodeName"` //关联的从主机名字
 	Services []StaticIpAccountRelation `json:"services,omitempty"`
+	NodeID   uint
+}
+
+type Node struct {
+	gorm.Model
+	NodeName  string
+	Region    string
+	DnsName   string
+	NodeIp    string
+	StaticIps []StaticIp
 }
 
 var DB *gorm.DB
@@ -58,6 +82,41 @@ func Open(dir string) {
 	DB.AutoMigrate(&StaticIpAccountRelation{})
 	DB.AutoMigrate(&StaticIp{})
 	DB.AutoMigrate(&StepRun{})
+	DB.AutoMigrate(&Node{})
+}
+
+func SetAccountsStatus(accountId uint, status Status, step string) StepRun {
+	var s StepRun
+	DB.First(&s, "account_id = ?", accountId)
+	s.Status = status
+	s.AccountID = accountId
+	s.Step = step
+	s.Service = ArbitrumService
+	DB.Save(&s)
+	return s
+}
+
+func FindFirstPendingTask() *StepRun {
+	var s StepRun
+	DB.First(&s, "status = ?", StatusPending)
+	if s.ID == 0 {
+		return nil
+	}
+	return &s
+}
+
+func AddOrUpdateNode(c *cfg.Heartbeat) {
+	var n Node
+	DB.First(&n, "node_name = ?", c.NodeName)
+	if n.ID == 0 || n.DnsName != c.DnsName || n.NodeName != c.NodeName || n.Region != c.AWSRegion ||
+		n.NodeIp != c.NodeIp {
+		n.NodeName = c.NodeName
+		n.DnsName = c.DnsName
+		n.Region = c.AWSRegion
+		n.NodeIp = c.NodeIp
+		DB.Save(&n)
+		log.Infof("update node: %+v", n)
+	}
 }
 
 func FindAccount(id int) Account {
@@ -161,4 +220,13 @@ func SaveOrUpdateIp(name, address string) {
 		ip.Ip = address
 		DB.Save(&ip)
 	}
+}
+
+func PickANode() Node {
+	var c int64
+	DB.Model(&Node{}).Count(&c)
+	r := rand.Intn(int(c))
+	var n Node
+	DB.First(&n, r+1)
+	return n
 }

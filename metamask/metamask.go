@@ -1,7 +1,6 @@
 package metamask
 
 import (
-	"airdrop-bot/db"
 	"airdrop-bot/log"
 	"context"
 	"fmt"
@@ -52,9 +51,9 @@ func (m *Metamask) Done() {
 	m.cancel()
 }
 
-func (m *Metamask) FirstOpenAndImportAccount(walletPass string, a db.Account) error {
+func (m *Metamask) FirstOpenAndImportAccount(walletPass string, mnemonic string) error {
 	log.Infof("begin open metamask and import account")
-	words := strings.Split(a.Mnemonic, " ")
+	words := strings.Split(mnemonic, " ")
 	if len(words) != 12 {
 		return fmt.Errorf("mnemonic word len is not 12")
 	}
@@ -97,9 +96,6 @@ func (m *Metamask) FirstOpenAndImportAccount(walletPass string, a db.Account) er
 		chromedp.Click(accountDetail),
 		chromedp.TextContent(addressPos, &address),
 	)
-	if a.Address != address {
-		db.UpdateAccountsByMnemonic(a.Mnemonic, address)
-	}
 	log.Infof("import account done")
 	return nil
 }
