@@ -1,5 +1,5 @@
 # 打包依赖阶段使用golang作为基础镜像
-FROM golang:1.18-alpine as builder
+FROM golang:1.18 as builder
 
 # 启用go module
 ENV GO111MODULE=on \
