@@ -20,7 +20,7 @@ FROM ubuntu:22.04
 
 WORKDIR /app
 RUN apt-get update && apt-get -y install wget && wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-    && apt-get install ./google-chrome-stable_current_amd64.deb
+    && apt-get install -y ./google-chrome-stable_current_amd64.deb
 
 # 将上一个阶段publish文件夹下的所有文件复制进来
 COPY --from=builder /app/node-runner .
