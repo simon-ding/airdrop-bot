@@ -107,7 +107,7 @@ func StepBeenDone(accountId uint, step string) bool {
 	if s.Status == StatusSuccess {
 		return true
 	}
-	DB.Delete(&s)
+	DB.Delete(&s, "id = ?", s.ID)
 	log.Infof("delete step, rerun: %+v", s)
 	return false
 }

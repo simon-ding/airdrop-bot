@@ -84,6 +84,7 @@ func (c *Client) heartbeat() error {
 }
 
 func (c *Client) updateTaskStatus(trackId uint, err error) error {
+	log.Infof("begin update task status: %v, err: %v", trackId, err)
 	ts := cfg.TaskStatus{
 		TrackID: trackId,
 	}
