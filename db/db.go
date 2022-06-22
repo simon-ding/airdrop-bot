@@ -33,11 +33,13 @@ type StaticIpAccountRelation struct {
 
 type StepRun struct {
 	gorm.Model
-	Service   string
-	Step      string
-	AccountID uint
-	Status    Status
-	Reason    string
+	Service    string
+	Step       string
+	Status     Status
+	Reason     string
+	AccountID  uint
+	NodeID     uint
+	StaticIpID uint
 }
 
 type Status int
@@ -85,38 +87,35 @@ func Open(dir string) {
 	DB.AutoMigrate(&Node{})
 }
 
-func SetAccountsStatus(accountId uint, status Status, step string) StepRun {
+func StepBeenDone(accountId uint, step string) bool {
 	var s StepRun
-	DB.First(&s, "account_id = ?", accountId)
-	s.Status = status
-	s.AccountID = accountId
-	s.Step = step
-	s.Service = ArbitrumService
-	DB.Save(&s)
-	return s
+	DB.First(&s, "account_id = ? AND step = ?", accountId, step)
+	if s.ID == 0 {
+		return false
+	}
+	return true
 }
 
-func FindFirstPendingTask() *StepRun {
+func FindFirstPendingTask(nodeID uint) *StepRun {
 	var s StepRun
-	DB.First(&s, "status = ?", StatusPending)
+	DB.First(&s, "status = ? AND node_id = ?", StatusPending, nodeID)
 	if s.ID == 0 {
 		return nil
 	}
 	return &s
 }
 
-func AddOrUpdateNode(c *cfg.Heartbeat) {
+func AddOrUpdateNode(c *cfg.Heartbeat) Node {
 	var n Node
 	DB.First(&n, "node_name = ?", c.NodeName)
-	if n.ID == 0 || n.DnsName != c.DnsName || n.NodeName != c.NodeName || n.Region != c.AWSRegion ||
-		n.NodeIp != c.NodeIp {
+	if n.ID == 0 || n.DnsName != c.DnsName || n.NodeName != c.NodeName || n.Region != c.AWSRegion {
 		n.NodeName = c.NodeName
 		n.DnsName = c.DnsName
 		n.Region = c.AWSRegion
-		n.NodeIp = c.NodeIp
 		DB.Save(&n)
 		log.Infof("update node: %+v", n)
 	}
+	return n
 }
 
 func FindAccount(id int) Account {

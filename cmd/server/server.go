@@ -55,7 +55,6 @@ func (s *Server) Serve() error {
 	})
 	s.r.POST(cfg.ApiHeartbeatUrl, s.heartBeat)
 	s.r.POST(cfg.ApiTaskStatusUpdateUrl, s.taskStatusUpdate)
-	s.r.POST(cfg.ApiGenAccounts, s.FirstRunGenAccount)
 	s.r.POST(cfg.ApiDoBridges, s.bridgeAccounts)
 	return s.r.Run(":8080")
 }
@@ -69,10 +68,10 @@ func (s *Server) heartBeat(c *gin.Context) {
 		return
 	}
 
-	db.AddOrUpdateNode(&hb)
+	node := db.AddOrUpdateNode(&hb)
 
 	var rsp cfg.HeartbeatResp
-	step := db.FindFirstPendingTask()
+	step := db.FindFirstPendingTask(node.ID)
 
 	if step != nil {
 		var a db.Account
@@ -83,7 +82,10 @@ func (s *Server) heartBeat(c *gin.Context) {
 			TrackID: step.ID,
 		}
 		log.Infof("bridge task of account %v has activated", a.ID)
-		db.SetAccountsStatus(a.ID, db.StatusRunning, db.StepArbitrumBridge)
+		step.Status = db.StatusRunning
+		db.DB.Save(&step)
+	} else {
+		log.Infof("no pending tasks")
 	}
 
 	c.JSON(http.StatusOK, rsp)
@@ -134,6 +136,11 @@ func (s *Server) doBridges() error {
 }
 
 func (s *Server) bridgeOne(a db.Account, retry int) error {
+	if db.StepBeenDone(a.ID, db.StepArbitrumBridge) {
+		log.Infof("account %d bridge has already been done, skip...", a.ID)
+		return nil
+	}
+
 	if !s.cfg.Owlracle.Disable {
 		for {
 			if s.isGasFeeAcceptable() {
@@ -144,15 +151,25 @@ func (s *Server) bridgeOne(a db.Account, retry int) error {
 			time.Sleep(5 * time.Minute)
 		}
 	}
-	err := s.attachOrAllocateAccountIp(a)
+
+	ip, err := s.attachOrAllocateAccountIp(a)
 	if err != nil {
 		return errors.Wrap(err, "attachOrAllocateAccountIp")
 	}
-	step := db.SetAccountsStatus(a.ID, db.StatusPending, db.StepArbitrumBridge) //set step initial status
+	step := db.StepRun{
+		Service:    db.ArbitrumService,
+		Step:       db.StepArbitrumBridge,
+		Status:     db.StatusPending,
+		Reason:     "",
+		AccountID:  a.ID,
+		NodeID:     ip.NodeID,
+		StaticIpID: ip.ID,
+	}
+	db.DB.Save(&step)
 
 loop:
 	for {
-		time.Sleep(time.Second)
+		time.Sleep(10 * time.Second)
 		db.DB.First(&step, step.ID)
 		switch step.Status {
 		case db.StatusRunning:
@@ -173,8 +190,9 @@ loop:
 	return nil
 }
 
-func (s *Server) attachOrAllocateAccountIp(a db.Account) error {
+func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 
+	var allocatedIP *db.StaticIp
 	ip, ok := db.AccountHasIp(db.ArbitrumService, a.ID)
 	if !ok {
 		/*
@@ -184,11 +202,11 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) error {
 		node := db.PickANode()
 		lightsail, err := aws.CreateLightsailClient(node.NodeName, node.Region, path.Join(s.cfg.Dir, "aws.config"))
 		if err != nil {
-			return errors.Wrap(err, "create lightsail client")
+			return nil, errors.Wrap(err, "create lightsail client")
 		}
 		attachedIpName, _, err := lightsail.GetAttachedIp()
 		if err != nil {
-			return errors.Wrap(err, "get attached static ip")
+			return nil, errors.Wrap(err, "get attached static ip")
 		}
 
 		ip2 := db.GetOrAddIp(attachedIpName)
@@ -197,11 +215,11 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) error {
 
 			newIpName := "airdrop_bot_" + utils.RandStringRunes(4)
 			if err := lightsail.CreateIp(newIpName); err != nil {
-				return errors.Wrap(err, "create ip")
+				return nil, errors.Wrap(err, "create ip")
 			}
 
 			if err := lightsail.DetachIp(attachedIpName); err != nil {
-				return errors.Wrap(err, "lightsail detach ip")
+				return nil, errors.Wrap(err, "lightsail detach ip")
 			}
 			newIp := db.GetOrAddIp(newIpName) //save new ip to db
 			newIp.NodeID = node.ID
@@ -214,8 +232,9 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) error {
 			}
 			db.SaveAccountIpRelation(&rel)
 			if err := lightsail.AttachIp(newIpName); err != nil {
-				return errors.Wrap(err, "attch ip")
+				return nil, errors.Wrap(err, "attch ip")
 			}
+			allocatedIP = &newIp
 		} else { //使用当前attachedIp
 			rel := db.StaticIpAccountRelation{
 				StaticIpID: ip2.ID,
@@ -224,6 +243,7 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) error {
 			}
 			db.SaveAccountIpRelation(&rel)
 
+			allocatedIP = &ip2
 		}
 		if _, address, err := lightsail.GetAttachedIp(); err == nil {
 			err := s.cf.UpdateDnsRecord(node.DnsName, address)
@@ -236,26 +256,27 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) error {
 
 	} else { //账户存在指定ip，如果当前ip是指定ip，就是用当前ip，如果不是切换ip
 
+		allocatedIP = ip
 		var node db.Node
 		db.DB.First(&node, ip.NodeID)
 		lightsail, err := aws.CreateLightsailClient(node.NodeName, node.Region, path.Join(s.cfg.Dir, "aws.config"))
 		if err != nil {
-			return errors.Wrap(err, "create lightsail client")
+			return nil, errors.Wrap(err, "create lightsail client")
 		}
 		attachedIpName, _, err := lightsail.GetAttachedIp()
 		if err != nil {
-			return errors.Wrap(err, "get attached static ip")
+			return nil, errors.Wrap(err, "get attached static ip")
 		}
 
 		if ip.Name != attachedIpName {
 			//attached ip is not the desired ip
 			err := lightsail.DetachIp(attachedIpName)
 			if err != nil {
-				return errors.Wrap(err, "detach ip")
+				return nil, errors.Wrap(err, "detach ip")
 			}
 			err = lightsail.AttachIp(ip.Name)
 			if err != nil {
-				return errors.Wrap(err, "attach ip")
+				return nil, errors.Wrap(err, "attach ip")
 			}
 		}
 		//更新cloudflare dns
@@ -269,10 +290,10 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) error {
 		}
 
 	}
-	return nil
+	return allocatedIP, nil
 }
 
-func (s *Server) FirstRunGenAccount(c *gin.Context) {
+func (s *Server) FirstRunGenAccount() {
 	num := s.cfg.AccountsToGen
 	accountNum := db.AccountNum()
 	if accountNum == num {

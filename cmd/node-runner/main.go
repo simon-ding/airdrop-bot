@@ -1,9 +1,12 @@
 package main
 
 import (
+	"airdrop-bot/asserts"
 	"airdrop-bot/cfg"
 	"airdrop-bot/log"
+	"airdrop-bot/utils"
 	"github.com/robfig/cron/v3"
+	"path"
 	"time"
 )
 
@@ -13,6 +16,13 @@ func main() {
 		log.Panicf("read config: %v", err)
 		return
 	}
+
+	err = utils.Unzip(asserts.Ext, path.Join(cfg1.Dir, "ext"))
+	if err != nil {
+		log.Errorf("unzip extension error: %v", err)
+		return
+	}
+
 	client := New(cfg1)
 
 	c := cron.New()

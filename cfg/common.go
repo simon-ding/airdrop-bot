@@ -3,7 +3,6 @@ package cfg
 //从节点心跳消息
 type Heartbeat struct {
 	NodeName  string `json:"nodeName"`
-	NodeIp    string `json:"nodeIp"`
 	DnsName   string `json:"dnsName"`
 	AWSRegion string `json:"awsRegion"`
 }

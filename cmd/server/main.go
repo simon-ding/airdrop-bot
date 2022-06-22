@@ -1,12 +1,10 @@
 package main
 
 import (
-	"airdrop-bot/asserts"
 	"airdrop-bot/aws"
 	"airdrop-bot/cfg"
 	"airdrop-bot/db"
 	"airdrop-bot/log"
-	"airdrop-bot/utils"
 	"path"
 )
 
@@ -24,12 +22,6 @@ func main() {
 		return
 	}
 
-	err = utils.Unzip(asserts.Ext, path.Join(cfg1.Dir, "ext"))
-	if err != nil {
-		log.Errorf("unzip extension error: %v", err)
-		return
-	}
-
 	db.Open(cfg1.Dir)
 	log.Infof("db open success")
 
@@ -38,6 +30,7 @@ func main() {
 		log.Errorf("server error: %v", err)
 		return
 	}
+	server.FirstRunGenAccount()
 
 	if err := server.Serve(); err != nil {
 		log.Errorf("start server error: %v", err)
