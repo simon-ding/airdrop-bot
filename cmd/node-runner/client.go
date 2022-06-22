@@ -79,6 +79,7 @@ func (c *Client) heartbeat() error {
 		if err != nil {
 			log.Errorf("update task status error: %v", err)
 		}
+		log.Infof("task done!!! task id %v, err: %v", rr.TrackID, err)
 	}()
 	return nil
 }
