@@ -86,8 +86,6 @@ func LoadServerConfig() (*ServerConfig, error) {
 func loadConfig(config interface{}) error {
 
 	// optionally look for config in the working directory
-	var cfg NodeConfig
-
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -100,7 +98,7 @@ func loadConfig(config interface{}) error {
 		return errors.Wrap(err, "load config")
 	}
 
-	if err := viper.Unmarshal(&cfg); err != nil {
+	if err := viper.Unmarshal(&config); err != nil {
 		return errors.Wrap(err, "unmarshal file")
 	}
 	return nil
