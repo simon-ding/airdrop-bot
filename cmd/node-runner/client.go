@@ -164,7 +164,7 @@ func (c *Client) bridgeOne(mnemonic string) error {
 	}
 	log.Infof("hop link metamask success")
 
-	err = hop.BridgeMoney(balance)
+	err = hop.BridgeMoney(balance - cfg.BridgeReverse)
 	if err != nil {
 		return errors.Wrap(err, "arb deposit")
 	}

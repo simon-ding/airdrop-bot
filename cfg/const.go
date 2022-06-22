@@ -1,6 +1,6 @@
 package cfg
 
-const BridgeReverse = 0.005
+const BridgeReverse = 0.0006
 
 const AuthHeader = "X-AUTH-TOKEN"
 
