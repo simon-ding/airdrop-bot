@@ -6,6 +6,8 @@ import (
 	"airdrop-bot/log"
 	"airdrop-bot/utils"
 	"github.com/robfig/cron/v3"
+	"os"
+	"os/exec"
 	"path"
 	"time"
 )
@@ -21,6 +23,13 @@ func main() {
 	if err != nil {
 		log.Errorf("unzip extension error: %v", err)
 		return
+	}
+
+	if cfg1.XvfbMod() {
+		res := "1920x1080x24"
+		log.Infof("xvfb mode, run xvfb %s...", res)
+		go exec.Command("Xvfb", ":1", "-screen", "0", res).Run()
+		os.Setenv("DISPLAY", ":1")
 	}
 
 	client := New(cfg1)

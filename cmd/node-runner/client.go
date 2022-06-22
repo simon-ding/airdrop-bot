@@ -13,8 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"os/exec"
 	"path"
 )
 
@@ -120,12 +118,6 @@ func (c *Client) updateTaskStatus(trackId uint, err error) error {
 }
 
 func (c *Client) startChrome() (context.Context, func()) {
-	if c.cfg.XvfbMod() {
-		res := "1920x1080x24"
-		log.Infof("xvfb mode, run xvfb %s...", res)
-		go exec.Command("Xvfb", ":1", "-screen", "0", res).Run()
-		os.Setenv("DISPLAY", ":1")
-	}
 
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", false),
