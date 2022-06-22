@@ -191,14 +191,14 @@ loop:
 		switch step.Status {
 		case db.StatusRunning:
 			if i == 0 {
-				log.Infof("bridge task for account %s begin to run", a.ID)
+				log.Infof("bridge task for account %v begin to run", a.ID)
 			}
 			i++
 		case db.StatusSuccess:
-			log.Infof("bridge task for account %s succeed", a.ID)
+			log.Infof("bridge task for account %v succeed", a.ID)
 			break loop
 		case db.StatusFailed: //retry
-			log.Errorf("bridge task for account %s failed, reason: %v", a.ID, step.Reason)
+			log.Errorf("bridge task for account %v failed, reason: %v", a.ID, step.Reason)
 			if retry == 3 {
 				return fmt.Errorf("maxium retry exceed for account: %v", a.ID)
 			}
