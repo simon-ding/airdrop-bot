@@ -104,7 +104,12 @@ func StepBeenDone(accountId uint, step string) bool {
 	if s.ID == 0 {
 		return false
 	}
-	return true
+	if s.Status == StatusSuccess {
+		return true
+	}
+	DB.Delete(&s)
+	log.Infof("delete step, rerun: %+v", s)
+	return false
 }
 
 func FindFirstPendingTask(nodeID uint) *StepRun {
