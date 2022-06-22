@@ -28,7 +28,6 @@ type NodeConfig struct {
 	ChromeMode     string `mapstructure:"chromeMode"`
 	DnsName        string `mapstructure:"dnsName"`
 	NodeName       string `mapstructure:"nodeName"`
-	InstanceName   string `mapstructure:"instanceName"`
 	Region         string `mapstructure:"region"`
 	Token          string `mapstructure:"token"`
 	ServerUrl      string `mapstructure:"serverUrl"`
