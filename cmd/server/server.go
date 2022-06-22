@@ -27,19 +27,21 @@ func NewServer(cfg *cfg.ServerConfig) (*Server, error) {
 	}
 
 	bn := binance.New(&cfg.Binance)
-
+	r := gin.New()
 	return &Server{
 		cfg: cfg,
 		cf:  cf,
 		bn:  bn,
+		r:   r,
 	}, nil
 }
 
 type Server struct {
-	cfg *cfg.ServerConfig
-	cf  *cloudflare.Client
-	bn  *binance.Binance
-	r   *gin.Engine
+	cfg  *cfg.ServerConfig
+	cf   *cloudflare.Client
+	bn   *binance.Binance
+	r    *gin.Engine
+	lock bool
 }
 
 func (s *Server) Serve() error {
@@ -113,11 +115,25 @@ func (s *Server) taskStatusUpdate(c *gin.Context) {
 }
 
 func (s *Server) bridgeAccounts(c *gin.Context) {
-	if err := s.doBridges(); err != nil {
-		log.Errorf("do bridges: %v", err)
-		c.String(http.StatusBadRequest, "")
+	if s.lock {
+		c.String(http.StatusBadRequest, "running")
+		return
 	}
-	log.Infof("---- ALL BRIDGES SUCCESS ----")
+
+	s.lock = true
+	go func() {
+		defer func() {
+			s.lock = false
+		}()
+
+		log.Infof("---------- BRIDGE START ------------")
+		if err := s.doBridges(); err != nil {
+			log.Errorf("do bridges: %v", err)
+			c.String(http.StatusBadRequest, "")
+		}
+		log.Infof("---- ALL BRIDGES SUCCESS ----")
+	}()
+	c.String(http.StatusOK, "")
 }
 
 func (s *Server) doBridges() error {
@@ -166,14 +182,18 @@ func (s *Server) bridgeOne(a db.Account, retry int) error {
 		StaticIpID: ip.ID,
 	}
 	db.DB.Save(&step)
-
+	log.Infof("add new task to db, account %d, step %+v", a.ID, step)
+	i := 0
 loop:
 	for {
 		time.Sleep(10 * time.Second)
 		db.DB.First(&step, step.ID)
 		switch step.Status {
 		case db.StatusRunning:
-			log.Infof("bridge task for account %s begin to run", a.ID)
+			if i == 0 {
+				log.Infof("bridge task for account %s begin to run", a.ID)
+			}
+			i++
 		case db.StatusSuccess:
 			log.Infof("bridge task for account %s succeed", a.ID)
 			break loop
@@ -195,11 +215,24 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 	var allocatedIP *db.StaticIp
 	ip, ok := db.AccountHasIp(db.ArbitrumService, a.ID)
 	if !ok {
+		log.Infof("account has no associated ip: %v", a.ID)
 		/*
 			账户没有关联的ip，从节点中随机选取一个节点。如果节点ip关联的账号没有达到最大限制，则使用此ip，反之创建一个新的ip
 		*/
-		//account has no associated ip, first check current ip, if reach limit then use new ip
-		node := db.PickANode()
+
+		//等待分配ip
+		var node db.Node
+		for {
+			node = db.PickANode()
+			if node.ID == 0 {
+				//no available node
+				log.Infof("no node available, waiting...")
+				time.Sleep(time.Minute)
+			} else {
+				break
+			}
+		}
+		log.Infof("node %v selected for the task: %+v", node.NodeName, node)
 		lightsail, err := aws.CreateLightsailClient(node.NodeName, node.Region, path.Join(s.cfg.Dir, "aws.config"))
 		if err != nil {
 			return nil, errors.Wrap(err, "create lightsail client")
@@ -209,10 +242,10 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 			return nil, errors.Wrap(err, "get attached static ip")
 		}
 
-		ip2 := db.GetOrAddIp(attachedIpName)
+		ip2 := db.GetOrAddIp(attachedIpName, node.ID)
 		count := db.IpRelatedAccountNum(db.ArbitrumService, ip2.ID)
 		if count >= s.cfg.AccountsPerIp { //当前ip超过允许的最大数量，换新的ip
-
+			log.Infof("attached ip has reached upper accounts limit: %v", ip2.Name)
 			newIpName := "airdrop_bot_" + utils.RandStringRunes(4)
 			if err := lightsail.CreateIp(newIpName); err != nil {
 				return nil, errors.Wrap(err, "create ip")
@@ -221,7 +254,7 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 			if err := lightsail.DetachIp(attachedIpName); err != nil {
 				return nil, errors.Wrap(err, "lightsail detach ip")
 			}
-			newIp := db.GetOrAddIp(newIpName) //save new ip to db
+			newIp := db.GetOrAddIp(newIpName, node.ID) //save new ip to db
 			newIp.NodeID = node.ID
 			db.DB.Save(&newIp) //更新node id
 
@@ -236,6 +269,7 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 			}
 			allocatedIP = &newIp
 		} else { //使用当前attachedIp
+			log.Infof("num of accounts associated with current ip %v, use attached ip", count)
 			rel := db.StaticIpAccountRelation{
 				StaticIpID: ip2.ID,
 				AccountID:  a.ID,
@@ -255,6 +289,7 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 		}
 
 	} else { //账户存在指定ip，如果当前ip是指定ip，就是用当前ip，如果不是切换ip
+		log.Infof("accounts has associated ip, use this ip: %+v", ip)
 
 		allocatedIP = ip
 		var node db.Node
@@ -270,6 +305,7 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 
 		if ip.Name != attachedIpName {
 			//attached ip is not the desired ip
+			log.Infof("attached ip is not the desired ip: %v", attachedIpName)
 			err := lightsail.DetachIp(attachedIpName)
 			if err != nil {
 				return nil, errors.Wrap(err, "detach ip")

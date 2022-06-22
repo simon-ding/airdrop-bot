@@ -157,13 +157,13 @@ func (c *Client) bridgeOne(mnemonic string) error {
 	if err != nil {
 		return err
 	}
-	balance, err := meta.Balance()
-	log.Infof("account current balance is %v", balance)
-
 	err = meta.OpenChanListAndAddNetwork("Optimism")
 	if err != nil {
 		return errors.Wrap(err, "add op")
 	}
+
+	balance, err := meta.Balance()
+	log.Infof("account current balance is %v", balance)
 
 	hop := services.MewHop(meta.Context(), meta, "ETH", "optimism", "arbitrum")
 	err = hop.LinkMetaMask()
@@ -172,7 +172,7 @@ func (c *Client) bridgeOne(mnemonic string) error {
 	}
 	log.Infof("hop link metamask success")
 
-	err = hop.BridgeMoney(balance - cfg.BridgeReverse)
+	err = hop.BridgeMoney(balance)
 	if err != nil {
 		return errors.Wrap(err, "arb deposit")
 	}

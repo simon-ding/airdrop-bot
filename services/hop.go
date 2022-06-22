@@ -46,9 +46,9 @@ func (h *Hop) LinkMetaMask() error {
 }
 
 func (h *Hop) BridgeMoney(amount float64) error {
-	input := `//input[@class='MuiInputBase-root MuiInput-root jss91 jss94 MuiInputBase-formControl MuiInput-formControl MuiInputBase-adornedEnd']`
-	sendButton := `//button[@class="MuiButtonBase-root MuiButton-root MuiButton-text jss23 jss112 jss58"]`
-	sendButton2 := `//button[@class="MuiButtonBase-root MuiButton-root MuiButton-text jss23 jss166 jss163"]`
+	input := `//input[@class="MuiInputBase-input MuiInput-input jss92 jss95 MuiInputBase-inputAdornedEnd"]`
+	sendButton := `//button[@class="MuiButtonBase-root MuiButton-root MuiButton-text jss27 jss112 jss58"]`
+	sendButton2 := `//button[@class="MuiButtonBase-root MuiButton-root MuiButton-text jss27 jss134 jss131"]`
 	log.Infof("bridge money %f", amount)
 	err := chromedp.Run(h.ctx,
 		chromedp.Sleep(5*time.Second),

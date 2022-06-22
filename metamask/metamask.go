@@ -320,6 +320,7 @@ func (m *Metamask) OpenChanListAndAddNetwork(networkName string) error {
 		chromedp.SendKeys(searchPos, networkName),
 		chromedp.Sleep(3*time.Second),
 		chromedp.Click(addNetworkButton),
+		chromedp.Sleep(3*time.Second),
 	)
 	if err != nil {
 		return err

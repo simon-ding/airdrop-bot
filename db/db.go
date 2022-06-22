@@ -5,8 +5,11 @@ import (
 	"airdrop-bot/log"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"math/rand"
+	"gorm.io/gorm/logger"
+	log2 "log"
+	"os"
 	"path"
+	"time"
 )
 
 const (
@@ -56,7 +59,6 @@ type StaticIp struct {
 	gorm.Model
 	Name     string                    `json:"name,omitempty"`
 	Ip       string                    `json:"ip,omitempty"`
-	NodeName string                    `json:"nodeName"` //关联的从主机名字
 	Services []StaticIpAccountRelation `json:"services,omitempty"`
 	NodeID   uint
 }
@@ -73,8 +75,17 @@ type Node struct {
 var DB *gorm.DB
 
 func Open(dir string) {
+	newLogger := logger.New(
+		log2.New(os.Stdout, "\r\n", log2.LstdFlags), // io writer
+		logger.Config{
+			SlowThreshold:             time.Second,   // Slow SQL threshold
+			LogLevel:                  logger.Silent, // Log level
+			IgnoreRecordNotFoundError: true,          // Ignore ErrRecordNotFound error for logger
+			Colorful:                  false,         // Disable color
+		},
+	)
 
-	db1, err := gorm.Open(sqlite.Open(path.Join(dir, "test.db")), &gorm.Config{})
+	db1, err := gorm.Open(sqlite.Open(path.Join(dir, "test.db")), &gorm.Config{Logger: newLogger})
 	if err != nil {
 		panic("failed to connect database")
 	}
@@ -168,27 +179,21 @@ func SaveAccount(a *Account) {
 	DB.Save(a)
 }
 
-func GetOrAddIp(name string) StaticIp {
+func GetOrAddIp(name string, nodeId uint) StaticIp {
 	var ip StaticIp
 	DB.First(&ip, "name = ?", name)
 	if ip.ID == 0 {
 		log.Infof("ip of name %s not found, create one", name)
 		ip.Name = name
+		ip.NodeID = nodeId
 		DB.Save(&ip)
+		log.Infof("save new ip: %+v", ip)
 	}
 	return ip
 }
 
 func SaveAccountIpRelation(rel *StaticIpAccountRelation) {
 	DB.Save(rel)
-}
-
-func SaveNewIP(name string, ip string) {
-	s := StaticIp{
-		Name: name,
-		Ip:   ip,
-	}
-	DB.Save(&s)
 }
 
 func IpRelatedAccountNum(service string, ipID uint) int {
@@ -224,8 +229,19 @@ func SaveOrUpdateIp(name, address string) {
 func PickANode() Node {
 	var c int64
 	DB.Model(&Node{}).Count(&c)
-	r := rand.Intn(int(c))
-	var n Node
-	DB.First(&n, r+1)
-	return n
+	for i := 0; i < int(c); i++ {
+		if !nodeHasRunningTask(uint(i + 1)) {
+			var n Node
+			DB.First(&n, i+1)
+
+			return n
+		}
+	}
+	return Node{}
+}
+
+func nodeHasRunningTask(nodeID uint) bool {
+	var c int64
+	DB.Model(&StepRun{}).Where("status = ?", nodeID).Count(&c)
+	return c != 0
 }
