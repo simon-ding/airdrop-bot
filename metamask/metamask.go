@@ -282,7 +282,8 @@ func (m *Metamask) Balance() (float64, error) {
 	var s string
 	balancePos := `//span[@class='currency-display-component__text']`
 	chromedp.Run(m.ctx,
-		chromedp.Navigate(metaExtUrl),
+		chromedp.Sleep(2*time.Second),
+		chromedp.Reload(),
 		chromedp.TextContent(balancePos, &s),
 	)
 	f, err := strconv.ParseFloat(s, 64)

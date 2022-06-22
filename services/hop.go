@@ -53,9 +53,9 @@ func (h *Hop) BridgeMoney(amount float64) error {
 	err := chromedp.Run(h.ctx,
 		chromedp.Sleep(5*time.Second),
 		chromedp.SendKeys(input, fmt.Sprintf("%f", amount)),
-		chromedp.Sleep(time.Second),
 		chromedp.Click(sendButton),
-		chromedp.Click(sendButton2),
+		chromedp.Sleep(time.Second),
+		chromedp.Click(sendButton2, chromedp.NodeVisible),
 	)
 	if err != nil {
 		return err
