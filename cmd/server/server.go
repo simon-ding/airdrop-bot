@@ -213,7 +213,7 @@ loop:
 func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 
 	var allocatedIP *db.StaticIp
-	ip, ok := db.AccountHasIp(db.ArbitrumService, a.ID)
+	ip, ok := db.AccountHasIp(a.StaticIpID)
 	if !ok {
 		log.Infof("account has no associated ip: %v", a.ID)
 		/*
@@ -243,7 +243,7 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 		}
 
 		ip2 := db.GetOrAddIp(attachedIpName, node.ID)
-		count := db.IpRelatedAccountNum(db.ArbitrumService, ip2.ID)
+		count := db.IpRelatedAccountNum(ip2.ID)
 		if count >= s.cfg.AccountsPerIp { //当前ip超过允许的最大数量，换新的ip
 			log.Infof("attached ip has reached upper accounts limit: %v", ip2.Name)
 			newIpName := "airdrop_bot_" + utils.RandStringRunes(4)
@@ -258,24 +258,18 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 			newIp.NodeID = node.ID
 			db.DB.Save(&newIp) //更新node id
 
-			rel := db.StaticIpAccountRelation{
-				StaticIpID: newIp.ID,
-				AccountID:  a.ID,
-				Service:    db.ArbitrumService,
-			}
-			db.SaveAccountIpRelation(&rel)
+			a.StaticIpID = newIp.ID
+			db.DB.Save(&a)
+
 			if err := lightsail.AttachIp(newIpName); err != nil {
 				return nil, errors.Wrap(err, "attch ip")
 			}
 			allocatedIP = &newIp
 		} else { //使用当前attachedIp
 			log.Infof("num of accounts associated with current ip %v, use attached ip", count)
-			rel := db.StaticIpAccountRelation{
-				StaticIpID: ip2.ID,
-				AccountID:  a.ID,
-				Service:    db.ArbitrumService,
-			}
-			db.SaveAccountIpRelation(&rel)
+
+			a.StaticIpID = ip2.ID
+			db.DB.Save(&a)
 
 			allocatedIP = &ip2
 		}
@@ -343,7 +337,6 @@ func (s *Server) FirstRunGenAccount() {
 			Mnemonic:   mnemonic,
 			Address:    address,
 			PrivateKey: priKey,
-			Services:   nil,
 		}
 		log.Infof("generate eth account: %s", address)
 		db.SaveAccount(&a)

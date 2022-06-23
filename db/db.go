@@ -22,16 +22,8 @@ type Account struct {
 	Mnemonic   string `json:"mnemonic"`
 	Address    string `json:"address"`
 	PrivateKey string `json:"privateKey"`
-	Services   []StaticIpAccountRelation
+	StaticIpID uint
 	Steps      []StepRun
-}
-
-// StaticIpAccountRelation 账户和ip的对应关系，Service为服务名称，如arbitrum等
-type StaticIpAccountRelation struct {
-	gorm.Model
-	Service    string `json:"service,omitempty"`
-	AccountID  uint   `json:"accountID,omitempty"`
-	StaticIpID uint   `json:"staticIpID,omitempty"`
 }
 
 type StepRun struct {
@@ -57,9 +49,9 @@ const (
 // StaticIp 代表aws分配的一个ip，它可以和metamask里的一个或多个账号绑定
 type StaticIp struct {
 	gorm.Model
-	Name     string                    `json:"name,omitempty"`
-	Ip       string                    `json:"ip,omitempty"`
-	Services []StaticIpAccountRelation `json:"services,omitempty"`
+	Name     string    `json:"name,omitempty"`
+	Ip       string    `json:"ip,omitempty"`
+	Accounts []Account `json:"accounts,omitempty"`
 	NodeID   uint
 }
 
@@ -92,7 +84,6 @@ func Open(dir string) {
 	DB = db1
 
 	DB.AutoMigrate(&Account{})
-	DB.AutoMigrate(&StaticIpAccountRelation{})
 	DB.AutoMigrate(&StaticIp{})
 	DB.AutoMigrate(&StepRun{})
 	DB.AutoMigrate(&Node{})
@@ -159,27 +150,6 @@ func SaveArbitrumStep(accountID uint, step string) {
 	DB.Save(&s)
 }
 
-func HasArbitrumStepRun(accountID uint, step string) bool {
-	var c int64
-	DB.Model(&StepRun{}).Where("account_id = ? AND step = ? AND service = ?", accountID, step, ArbitrumService).
-		Count(&c)
-	return c > 0
-}
-
-func HasArbitrumStepAllRun(accountID uint) bool {
-	return HasArbitrumStepRun(accountID, StepArbitrumDeposit) && HasArbitrumStepRun(accountID, StepAaveSupplyAndBorrow) &&
-		HasArbitrumStepRun(accountID, StepGmxSwap)
-}
-
-func UpdateAccountsByMnemonic(mnemonic, address string) {
-	var a Account
-	DB.Model(&Account{}).Where("mnemonic = ?", mnemonic).First(&a)
-	a.Mnemonic = mnemonic
-	a.Address = address
-	log.Debugf("update account to %+v", a)
-	DB.Save(&a)
-}
-
 func SaveAccount(a *Account) {
 	DB.Save(a)
 }
@@ -197,25 +167,18 @@ func GetOrAddIp(name string, nodeId uint) StaticIp {
 	return ip
 }
 
-func SaveAccountIpRelation(rel *StaticIpAccountRelation) {
-	DB.Save(rel)
-}
-
-func IpRelatedAccountNum(service string, ipID uint) int {
-
+func IpRelatedAccountNum(ipID uint) int {
 	var n int64
-	DB.Model(&StaticIpAccountRelation{}).Where("static_ip_id = ? AND service= ?", ipID, service).Count(&n)
+	DB.Model(&Account{}).Where("static_ip_id = ?", ipID).Count(&n)
 	return int(n)
 }
 
-func AccountHasIp(service string, accountID uint) (*StaticIp, bool) {
-	var rel StaticIpAccountRelation
-	DB.Model(&StaticIpAccountRelation{}).Where("account_id = ? AND service= ?", accountID, service).First(&rel)
-	if rel.ID == 0 {
+func AccountHasIp(staticIpId uint) (*StaticIp, bool) {
+	if staticIpId == 0 {
 		return nil, false
 	}
 	var ip StaticIp
-	DB.First(&ip, rel.StaticIpID)
+	DB.First(&ip, staticIpId)
 
 	return &ip, true
 }
