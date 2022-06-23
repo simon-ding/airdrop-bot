@@ -17,4 +17,4 @@ data/
 ext/
 *.db
 aws.config
-config.yaml
+config*.yaml
