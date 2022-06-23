@@ -221,17 +221,7 @@ func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 		*/
 
 		//等待分配ip
-		var node db.Node
-		for {
-			node = db.PickANode()
-			if node.ID == 0 {
-				//no available node
-				log.Infof("no node available, waiting...")
-				time.Sleep(time.Minute)
-			} else {
-				break
-			}
-		}
+		node := db.PickANodeRandom()
 		log.Infof("node %v selected for the task: %+v", node.NodeName, node)
 		lightsail, err := aws.CreateLightsailClient(node.NodeName, node.Region, path.Join(s.cfg.Dir, "aws.config"))
 		if err != nil {

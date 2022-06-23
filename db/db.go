@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	log2 "log"
+	"math/rand"
 	"os"
 	"path"
 	"time"
@@ -194,18 +195,13 @@ func SaveOrUpdateIp(name, address string) {
 	}
 }
 
-func PickANode() Node {
+func PickANodeRandom() Node {
 	var c int64
 	DB.Model(&Node{}).Count(&c)
-	for i := 0; i < int(c); i++ {
-		if !nodeHasRunningTask(uint(i + 1)) {
-			var n Node
-			DB.First(&n, i+1)
-
-			return n
-		}
-	}
-	return Node{}
+	r := rand.Intn(int(c))
+	var n Node
+	DB.First(&n, r+1)
+	return n
 }
 
 func nodeHasRunningTask(nodeID uint) bool {
