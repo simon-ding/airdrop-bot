@@ -25,11 +25,16 @@ func New(cfg *cfg.NodeConfig) *Client {
 }
 
 type Client struct {
-	cfg  *cfg.NodeConfig
-	http *http.Client
+	cfg    *cfg.NodeConfig
+	http   *http.Client
+	locked bool
 }
 
 func (c *Client) heartbeat() error {
+	if c.locked {
+		return nil
+	}
+	c.locked = true
 	n := cfg.Heartbeat{
 		NodeName:  c.cfg.NodeName,
 		DnsName:   c.cfg.DnsName,
@@ -71,6 +76,9 @@ func (c *Client) heartbeat() error {
 	}
 	log.Infof("task accepted step %v, track id %v", rr.Task, rr.TrackID)
 	go func() {
+		defer func() {
+			c.locked = false
+		}()
 		err := c.bridgeOne(rr.Account)
 		if err != nil {
 			log.Errorf("bridge error: %v", err)
