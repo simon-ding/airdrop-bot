@@ -4,4 +4,4 @@ services:
     image: registry.cn-shanghai.aliyuncs.com/simon_ding/node-runner
     restart: always
     volumes:
-      - ./config-node.yaml:/app/config-node.yaml
+      - ./config.yaml:/app/config.yaml
