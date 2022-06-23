@@ -10,22 +10,22 @@ import (
 
 func main() {
 
-	cfg1, err := cfg.LoadServerConfig()
+	cfg1, err := cfg.LoadConfig()
 	if err != nil {
 		log.Panicf("read config: %v", err)
 	}
 	log.Info("read config success")
-	awsDir := path.Join(cfg1.Dir, "aws.config")
-	err = aws.WriteAwsConfig(cfg1.AWS.AccessKeyID, cfg1.AWS.SecretAccessKey, awsDir)
+	awsDir := path.Join(cfg1.Server.Dir, "aws.config")
+	err = aws.WriteAwsConfig(cfg1.Server.AWS.AccessKeyID, cfg1.Server.AWS.SecretAccessKey, awsDir)
 	if err != nil {
 		log.Errorf("write aws config error: %v", err)
 		return
 	}
 
-	db.Open(cfg1.Dir)
+	db.Open(cfg1.Server.Dir)
 	log.Infof("db open success")
 
-	server, err := NewServer(cfg1)
+	server, err := NewServer(&cfg1.Server)
 	if err != nil {
 		log.Errorf("server error: %v", err)
 		return

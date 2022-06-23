@@ -10,6 +10,11 @@ const (
 	ChromeModXvfb = "xvfb"
 )
 
+type Config struct {
+	Server ServerConfig `mapstructure:"server"`
+	Node   NodeConfig   `mapstructure:"node"`
+}
+
 type ServerConfig struct {
 	AccountsPerIp    int        `mapstructure:"accountsPerIp"`
 	AccountsToGen    int        `mapstructure:"accountsToGen"`
@@ -60,31 +65,12 @@ type Binance struct {
 	SecretKey string `mapstructure:"secretKey"`
 }
 
-func LoadNodeConfig() (*NodeConfig, error) {
-	viper.SetConfigName("config-node") // name of config file (without extension)
-	viper.SetConfigType("yaml")        // REQUIRED if the config file does not have the extension in the name
+func LoadConfig() (*Config, error) {
+	viper.SetConfigName("config") // name of config file (without extension)
+	viper.SetConfigType("yaml")   // REQUIRED if the config file does not have the extension in the name
 	viper.AddConfigPath(".")
-	viper.SetDefault("dir", ".")
 
-	var cc NodeConfig
-	err := loadConfig(&cc)
-	return &cc, err
-}
-
-func LoadServerConfig() (*ServerConfig, error) {
-	viper.SetConfigName("config-server") // name of config file (without extension)
-	viper.SetConfigType("yaml")          // REQUIRED if the config file does not have the extension in the name
-	viper.AddConfigPath(".")
-	viper.SetDefault("accountsPerIp", 3)
-	viper.SetDefault("gasFeeAcceptable", 7)
-
-	var cc ServerConfig
-	err := loadConfig(&cc)
-	return &cc, err
-}
-
-func loadConfig(config interface{}) error {
-
+	var cc Config
 	// optionally look for config in the working directory
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
@@ -95,11 +81,11 @@ func loadConfig(config interface{}) error {
 			// Config file was found but another error was produced
 		}
 
-		return errors.Wrap(err, "load config")
+		return nil, errors.Wrap(err, "load config")
 	}
 
-	if err := viper.Unmarshal(&config); err != nil {
-		return errors.Wrap(err, "unmarshal file")
+	if err := viper.Unmarshal(&cc); err != nil {
+		return nil, errors.Wrap(err, "unmarshal file")
 	}
-	return nil
+	return &cc, err
 }

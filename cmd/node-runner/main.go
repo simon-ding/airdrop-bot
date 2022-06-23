@@ -13,26 +13,26 @@ import (
 )
 
 func main() {
-	cfg1, err := cfg.LoadNodeConfig()
+	cfg1, err := cfg.LoadConfig()
 	if err != nil {
 		log.Panicf("read config: %v", err)
 		return
 	}
 
-	err = utils.Unzip(asserts.Ext, path.Join(cfg1.Dir, "ext"))
+	err = utils.Unzip(asserts.Ext, path.Join(cfg1.Node.Dir, "ext"))
 	if err != nil {
 		log.Errorf("unzip extension error: %v", err)
 		return
 	}
 
-	if cfg1.XvfbMod() {
+	if cfg1.Node.XvfbMod() {
 		res := "1920x1080x24"
 		log.Infof("xvfb mode, run xvfb %s...", res)
 		go exec.Command("Xvfb", ":1", "-screen", "0", res).Run()
 		os.Setenv("DISPLAY", ":1")
 	}
 
-	client := New(cfg1)
+	client := New(&cfg1.Node)
 
 	c := cron.New()
 	c.AddFunc("@every 10s", func() {
