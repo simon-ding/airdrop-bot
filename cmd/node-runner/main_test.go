@@ -32,5 +32,5 @@ func TestNew(t *testing.T) {
 
 	client := New(&cfg1.Node)
 
-	client.bridgeOne("surprise fog bean render you soda ostrich add soul then asthma salmon")
+	client.bridgeOne("")
 }
