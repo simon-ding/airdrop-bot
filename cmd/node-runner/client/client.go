@@ -79,7 +79,7 @@ func (c *Client) Heartbeat() error {
 		defer func() {
 			c.locked = false
 		}()
-		err := c.bridgeOne(rr.Account)
+		err := c.BridgeOne(rr.Account)
 		if err != nil {
 			log.Errorf("bridge error: %v", err)
 		}
@@ -150,7 +150,7 @@ func (c *Client) startChrome() (context.Context, func()) {
 	}
 }
 
-func (c *Client) bridgeOne(mnemonic string) error {
+func (c *Client) BridgeOne(mnemonic string) error {
 	ctx, cancel := c.startChrome()
 	defer cancel()
 

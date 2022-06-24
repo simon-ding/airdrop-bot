@@ -3,6 +3,7 @@ package main
 import (
 	"airdrop-bot/asserts"
 	"airdrop-bot/cfg"
+	client2 "airdrop-bot/cmd/node-runner/client"
 	"airdrop-bot/log"
 	"airdrop-bot/utils"
 	"os"
@@ -30,7 +31,7 @@ func TestNew(t *testing.T) {
 		os.Setenv("DISPLAY", ":1")
 	}
 
-	client := New(&cfg1.Node)
+	client := client2.New(&cfg1.Node)
 
-	client.bridgeOne("")
+	client.BridgeOne("")
 }
