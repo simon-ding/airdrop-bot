@@ -157,6 +157,9 @@ func (s *Server) bridgeOne(a db.Account, retry int) error {
 		return nil
 	}
 
+	t := time.Hour + time.Minute*time.Duration(rand.Intn(30))
+	log.Infof("wait %v for the next turn", t)
+
 	if !s.cfg.Owlracle.Disable {
 		for {
 			if s.isGasFeeAcceptable() {
