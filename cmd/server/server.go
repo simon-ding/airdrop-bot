@@ -143,22 +143,25 @@ func (s *Server) doBridges() error {
 			log.Errorf("accounts with id %d not found in db, skip it", i+1)
 			continue
 		}
+		if db.StepBeenDone(account.ID, db.StepArbitrumBridge) {
+			log.Infof("account %d bridge has already been done, skip...", account.ID)
+			continue
+		}
+
 		if err := s.bridgeOne(account, 0); err != nil {
 			log.Errorf("bridge account %d error: %v", account.ID, err)
 			return err
 		}
+
+		t := time.Hour + time.Minute*time.Duration(rand.Intn(30))
+		log.Infof("wait %v for the next turn", t)
+		time.Sleep(t)
+
 	}
 	return nil
 }
 
 func (s *Server) bridgeOne(a db.Account, retry int) error {
-	if db.StepBeenDone(a.ID, db.StepArbitrumBridge) {
-		log.Infof("account %d bridge has already been done, skip...", a.ID)
-		return nil
-	}
-
-	t := time.Hour + time.Minute*time.Duration(rand.Intn(30))
-	log.Infof("wait %v for the next turn", t)
 
 	if !s.cfg.Owlracle.Disable {
 		for {
