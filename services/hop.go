@@ -49,7 +49,7 @@ func (h *Hop) BridgeMoney(amount float64) error {
 	input := `//input[@class="MuiInputBase-input MuiInput-input jss92 jss95 MuiInputBase-inputAdornedEnd"]`
 	sendButton := `//button[@class="MuiButtonBase-root MuiButton-root MuiButton-text jss27 jss112 jss58"]`
 	sendButton2 := `//button[@class="MuiButtonBase-root MuiButton-root MuiButton-text jss27 jss134 jss131"]`
-	log.Infof("start bridge money")
+	log.Infof("start bridge money %v", amount)
 
 	err := chromedp.Run(h.ctx,
 		chromedp.Sleep(5*time.Second),
