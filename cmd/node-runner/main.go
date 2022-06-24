@@ -3,6 +3,7 @@ package main
 import (
 	"airdrop-bot/asserts"
 	"airdrop-bot/cfg"
+	client2 "airdrop-bot/cmd/node-runner/client"
 	"airdrop-bot/log"
 	"airdrop-bot/utils"
 	"github.com/robfig/cron/v3"
@@ -32,11 +33,11 @@ func main() {
 		os.Setenv("DISPLAY", ":1")
 	}
 
-	client := New(&cfg1.Node)
+	client := client2.New(&cfg1.Node)
 
 	c := cron.New()
 	c.AddFunc("@every 10s", func() {
-		if err := client.heartbeat(); err != nil {
+		if err := client.Heartbeat(); err != nil {
 			log.Errorf("heartbeat error: %v", err)
 		}
 	})

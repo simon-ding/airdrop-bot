@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"airdrop-bot/cfg"
@@ -30,7 +30,7 @@ type Client struct {
 	locked bool
 }
 
-func (c *Client) heartbeat() error {
+func (c *Client) Heartbeat() error {
 	if c.locked {
 		return nil
 	}

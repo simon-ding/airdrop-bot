@@ -46,13 +46,16 @@ func (h *Hop) LinkMetaMask() error {
 }
 
 func (h *Hop) BridgeMoney(amount float64) error {
-	input := `//input[@class="MuiInputBase-input MuiInput-input jss92 jss95 MuiInputBase-inputAdornedEnd"]`
+	maxButton := `//button[text()='MAX']`
+	//input := `//input[@class="MuiInputBase-input MuiInput-input jss92 jss95 MuiInputBase-inputAdornedEnd"]`
 	sendButton := `//button[@class="MuiButtonBase-root MuiButton-root MuiButton-text jss27 jss112 jss58"]`
 	sendButton2 := `//button[@class="MuiButtonBase-root MuiButton-root MuiButton-text jss27 jss134 jss131"]`
-	log.Infof("bridge money %f", amount)
+	log.Infof("start bridge money")
+
 	err := chromedp.Run(h.ctx,
 		chromedp.Sleep(5*time.Second),
-		chromedp.SendKeys(input, fmt.Sprintf("%f", amount)),
+		chromedp.Click(maxButton),
+		//chromedp.SendKeys(input, fmt.Sprintf("%f", amount)),
 		chromedp.Click(sendButton),
 		chromedp.Sleep(time.Second),
 		chromedp.Click(sendButton2, chromedp.NodeVisible),
@@ -64,7 +67,7 @@ func (h *Hop) BridgeMoney(amount float64) error {
 		return errors.Wrap(err, "meta confirm transaction")
 	}
 	t := 2 * time.Minute
-	log.Infof("deposit %f eth to arb (using hop) success, wait %v", amount, t)
+	log.Infof("deposit eth to arb (using hop) success, wait %v", t)
 	time.Sleep(t)
 	return nil
 
