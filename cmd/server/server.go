@@ -80,7 +80,7 @@ func (s *Server) heartBeat(c *gin.Context) {
 		db.DB.First(&a, step.AccountID)
 		rsp = cfg.HeartbeatResp{
 			Account: a.Mnemonic,
-			Task:    db.StepArbitrumBridge,
+			Task:    db.StepArbitrumBridge2,
 			TrackID: step.ID,
 		}
 		log.Infof("bridge task of account %v has activated", a.ID)
@@ -200,7 +200,7 @@ func (s *Server) bridgeOne(a db.Account, retry int) error {
 	}
 	step := db.StepRun{
 		Service:    db.ArbitrumService,
-		Step:       db.StepArbitrumBridge2,
+		Step:       db.StepArbitrumBridge,
 		Status:     db.StatusPending,
 		Reason:     "",
 		AccountID:  a.ID,
