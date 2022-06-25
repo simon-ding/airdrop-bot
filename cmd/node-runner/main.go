@@ -30,9 +30,9 @@ func main() {
 		res := "1920x1080x24"
 		log.Infof("xvfb mode, run xvfb %s...", res)
 		go func() {
-			err := exec.Command("Xvfb", ":1", "-screen", "0", res).Run()
+			b, err := exec.Command("Xvfb", ":1", "-screen", "0", res).Output()
 			if err != nil {
-				log.Errorf("run xvfb error:　%v", err)
+				log.Errorf("run xvfb error: %v:　%v", string(b), err)
 			}
 		}()
 		os.Setenv("DISPLAY", ":1")
