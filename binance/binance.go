@@ -19,12 +19,12 @@ type Binance struct {
 	client *binance.Client
 }
 
-func (b *Binance) WithdrawEth(addr string, amount float64) error {
+func (b *Binance) WithdrawEth(network, addr string, amount float64) error {
 	req := b.client.NewCreateWithdrawService()
 	req.Coin("ETH")
 	req.Address(addr)
 	req.Amount(fmt.Sprintf("%v", amount))
-	req.Network("Optimism")
+	req.Network(network)
 	if _, err := req.Do(context.Background()); err != nil {
 		return errors.Wrap(err, "with draw")
 	}

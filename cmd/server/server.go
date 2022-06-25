@@ -119,6 +119,11 @@ func (s *Server) bridgeAccounts(c *gin.Context) {
 		c.String(http.StatusBadRequest, "running")
 		return
 	}
+	trans := c.Param("transfer")
+	transfer, err := strconv.ParseBool(trans)
+	if err != nil {
+		transfer = false
+	}
 
 	s.lock = true
 	go func() {
@@ -127,7 +132,7 @@ func (s *Server) bridgeAccounts(c *gin.Context) {
 		}()
 
 		log.Infof("---------- BRIDGE START ------------")
-		if err := s.doBridges(); err != nil {
+		if err := s.doBridges(transfer); err != nil {
 			log.Errorf("do bridges: %v", err)
 			c.String(http.StatusBadRequest, "")
 		}
@@ -136,7 +141,7 @@ func (s *Server) bridgeAccounts(c *gin.Context) {
 	c.String(http.StatusOK, "")
 }
 
-func (s *Server) doBridges() error {
+func (s *Server) doBridges(transfer bool) error {
 	for i := 0; i < s.cfg.AccountsToGen; i++ {
 		account := db.FindAccount(i + 1)
 		if account.ID == 0 {
@@ -147,12 +152,31 @@ func (s *Server) doBridges() error {
 			log.Infof("account %d bridge has already been done, skip...", account.ID)
 			continue
 		}
+		//if transfer {
+		//	if err := s.transferEth(account.Address); err != nil {
+		//		log.Errorf("withdraw from binance error: %v", err)
+		//	}
+		//}
 
 		if err := s.bridgeOne(account, 0); err != nil {
 			log.Errorf("bridge account %d error: %v", account.ID, err)
 			return err
 		}
+		t := time.Minute * time.Duration(rand.Intn(10)+10)
+		log.Infof("--- sleep for %v ---", t)
+		time.Sleep(t)
 
+	}
+	return nil
+}
+
+func (s *Server) transferEth(address string) error {
+	amount := 0.015 + rand.Float64()/100
+	log.Infof("transfer enabled, transfer %v eth to address %v", amount, address)
+
+	err := s.bn.WithdrawEth("ARBITRUM", address, amount)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -386,37 +410,5 @@ func (s *Server) gmxSwapCoin(meta *metamask.Metamask, callback func()) error {
 		return errors.Wrap(err, "gmx swap coin")
 	}
 	callback()
-	return nil
-}
-
-func (s *Server) TransferEthToAccounts() error {
-	balance, err := s.bn.EthBalance()
-	if err != nil {
-		return errors.Wrap(err, "get balance")
-	}
-	bb, err := strconv.ParseFloat(balance, 64)
-	if err != nil {
-		return errors.Wrap(err, "parse float")
-	}
-
-	var accounts []db.Account
-	db.DB.Find(&accounts)
-	perAccount := bb / float64(len(accounts))
-
-	p := perAccount
-	for p < 1 {
-		p *= 10
-	}
-	p = p / perAccount * 10
-
-	for _, a := range accounts {
-		r := float64(rand.Intn(10)-5)/p + perAccount - 1/(p*10)
-
-		err := s.bn.WithdrawEth(a.Address, r)
-		if err != nil {
-			log.Errorf("transfer to account %v error: %v", a.Address, err)
-			continue
-		}
-	}
 	return nil
 }

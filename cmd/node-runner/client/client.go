@@ -2,6 +2,7 @@ package client
 
 import (
 	"airdrop-bot/cfg"
+	"airdrop-bot/db"
 	"airdrop-bot/log"
 	"airdrop-bot/metamask"
 	"airdrop-bot/services"
@@ -73,7 +74,7 @@ func (c *Client) Heartbeat() error {
 	}
 	log.Infof("task accepted step %v, track id %v", rr.Task, rr.TrackID)
 	go func() {
-		err := c.BridgeOne(rr.Account)
+		err := c.BridgeOne(rr.Account, rr.Task)
 		if err != nil {
 			log.Errorf("bridge error: %v", err)
 		}
@@ -144,7 +145,7 @@ func (c *Client) startChrome() (context.Context, func()) {
 	}
 }
 
-func (c *Client) BridgeOne(mnemonic string) error {
+func (c *Client) BridgeOne(mnemonic string, step string) error {
 	ctx, cancel := c.startChrome()
 	defer cancel()
 
@@ -153,6 +154,33 @@ func (c *Client) BridgeOne(mnemonic string) error {
 	if err != nil {
 		return err
 	}
+
+	if step == db.StepArbitrumBridge2 {
+		log.Infof("bridge from arbitrum to op")
+		err = meta.OpenChanListAndAddNetwork("Arbitrum One")
+		if err != nil {
+			return errors.Wrap(err, "add arb")
+		}
+
+		balance, err := meta.Balance()
+		log.Infof("account current balance is %v", balance)
+
+		hop := services.MewHop(meta.Context(), meta, "ETH", "arbitrum", "optimism")
+		err = hop.LinkMetaMask()
+		if err != nil {
+			return err
+		}
+		log.Infof("hop link metamask success")
+
+		err = hop.BridgeMoney(balance - cfg.BridgeReverse)
+		if err != nil {
+			return errors.Wrap(err, "arb deposit")
+		}
+
+		balance = meta.WaitForBalanceChange(balance)
+	}
+
+	log.Infof("bridge from op to arbitrum")
 	err = meta.OpenChanListAndAddNetwork("Optimism")
 	if err != nil {
 		return errors.Wrap(err, "add op")
