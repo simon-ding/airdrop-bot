@@ -200,7 +200,7 @@ func (s *Server) bridgeOne(a db.Account, retry int) error {
 	}
 	step := db.StepRun{
 		Service:    db.ArbitrumService,
-		Step:       db.StepArbitrumBridge,
+		Step:       db.StepArbitrumBridge2,
 		Status:     db.StatusPending,
 		Reason:     "",
 		AccountID:  a.ID,
