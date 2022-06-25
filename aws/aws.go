@@ -1,8 +1,8 @@
 package aws
 
 import (
-	"airdrop-bot/db"
 	"airdrop-bot/log"
+	"airdrop-bot/utils"
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -84,14 +84,37 @@ func (c *Client) GetAttachedIp() (string, string, error) {
 	return "", "", fmt.Errorf("no attached ip")
 }
 
-func (c *Client) GetAllIps() {
-	in := lightsail.GetStaticIpsInput{}
-	out, err := c.Client.GetStaticIps(context.TODO(), &in)
+func (c *Client) DeleteIp(ipName string) error {
+	in := lightsail.ReleaseStaticIpInput{StaticIpName: &ipName}
+	out, err := c.Client.ReleaseStaticIp(context.TODO(), &in)
 	if err != nil {
-		return
+		return errors.Wrap(err, "release ip")
 	}
-	for _, ip := range out.StaticIps {
-		db.SaveOrUpdateIp(*ip.Name, *ip.IpAddress)
+	log.Infof("release ip success: %+v", out)
+	return nil
+}
+
+func (c *Client) AttachNewIP() error {
+	name, ip, err := c.GetAttachedIp()
+	if err != nil {
+		return err
+	}
+	log.Infof("current attached ip: %s(%v)", name, ip)
+	err = c.DetachIp(name)
+	if err != nil {
+		return err
 	}
 
+	newName := "ip_" + utils.RandStringRunes(6)
+	err = c.CreateIp(newName)
+	if err != nil {
+		return err
+	}
+
+	err = c.AttachIp(newName)
+	if err != nil {
+		return err
+	}
+	log.Infof("attach %v a new ip %s", c.instanceName, newName)
+	return err
 }

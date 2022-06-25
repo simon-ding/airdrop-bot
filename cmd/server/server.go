@@ -153,10 +153,6 @@ func (s *Server) doBridges() error {
 			return err
 		}
 
-		t := time.Hour + time.Minute*time.Duration(rand.Intn(30))
-		log.Infof("wait %v for the next turn", t)
-		time.Sleep(t)
-
 	}
 	return nil
 }
