@@ -1,5 +1,7 @@
 package cfg
 
+import "time"
+
 //从节点心跳消息
 type Heartbeat struct {
 	NodeName  string `json:"nodeName"`
@@ -8,9 +10,10 @@ type Heartbeat struct {
 }
 
 type HeartbeatResp struct {
-	Account string `json:"account"`
-	Task    string `json:"task"`
-	TrackID uint   `json:"trackID"`
+	Account string        `json:"account"`
+	Task    string        `json:"task"`
+	TrackID uint          `json:"trackID"`
+	Timeout time.Duration `json:"timeout"`
 }
 
 type TaskStatus struct {

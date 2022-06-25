@@ -82,6 +82,7 @@ func (s *Server) heartBeat(c *gin.Context) {
 			Account: a.Mnemonic,
 			Task:    db.StepArbitrumBridge2,
 			TrackID: step.ID,
+			Timeout: time.Minute * 15,
 		}
 		log.Infof("bridge task of account %v has activated", a.ID)
 		step.Status = db.StatusRunning

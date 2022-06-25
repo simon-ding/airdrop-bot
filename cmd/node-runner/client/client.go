@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
+	"time"
 )
 
 func New(cfg *cfg.NodeConfig) *Client {
@@ -72,15 +73,27 @@ func (c *Client) Heartbeat() error {
 	if rr.Account == "" {
 		return nil
 	}
-	log.Infof("task accepted step %v, track id %v", rr.Task, rr.TrackID)
+	log.Infof("task accepted step %v, %+v", rr.Task, rr)
 	go func() {
-		err := c.BridgeOne(rr.Account, rr.Task)
-		if err != nil {
-			log.Errorf("bridge error: %v", err)
+		t := time.After(rr.Timeout)
+		var err error
+		ch := make(chan error)
+
+		go func() {
+			ch <- c.BridgeOne(rr.Account, rr.Task)
+		}()
+		select {
+		case <-t:
+			err = fmt.Errorf("timeout")
+		case x := <-ch:
+			err = x
 		}
-		err = c.updateTaskStatus(rr.TrackID, err)
 		if err != nil {
-			log.Errorf("update task status error: %v", err)
+			log.Errorf("task error: %v", err)
+		}
+		err2 := c.updateTaskStatus(rr.TrackID, err)
+		if err != nil {
+			log.Errorf("update task status error: %v", err2)
 		}
 		log.Infof("task done!!! task id %v, err: %v", rr.TrackID, err)
 	}()
