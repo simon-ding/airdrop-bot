@@ -86,10 +86,7 @@ func (s *Server) heartBeat(c *gin.Context) {
 		log.Infof("bridge task of account %v has activated", a.ID)
 		step.Status = db.StatusRunning
 		db.DB.Save(&step)
-	} else {
-		log.Infof("no pending tasks")
 	}
-
 	c.JSON(http.StatusOK, rsp)
 }
 
