@@ -86,10 +86,7 @@ func (c *Client) Heartbeat() error {
 		select {
 		case <-t:
 			err = fmt.Errorf("timeout")
-			if c.cancel != nil {
-				log.Infof("close browser")
-				c.cancel() //close browser
-			}
+			c.closeBrowser()
 		case x := <-ch:
 			err = x
 		}
@@ -103,6 +100,13 @@ func (c *Client) Heartbeat() error {
 		log.Infof("task done!!! task id %v, err: %v", rr.TrackID, err)
 	}()
 	return nil
+}
+
+func (c *Client) closeBrowser() {
+	if c.cancel != nil {
+		log.Infof("close browser")
+		c.cancel() //close browser
+	}
 }
 
 func (c *Client) updateTaskStatus(trackId uint, err error) error {
@@ -164,22 +168,22 @@ func (c *Client) startChrome() (context.Context, func()) {
 }
 
 func (c *Client) BridgeOne(mnemonic string, step string) error {
+	ctx, cancel := c.startChrome()
+	c.cancel = cancel
+
+	defer c.closeBrowser()
 
 	var err error
 	switch step {
 	case db.StepArbitrumBridge:
-		err = c.DoStepBridge(mnemonic)
+		err = c.DoStepBridge(mnemonic, ctx)
 	case db.StepArbitrumBridge2:
-		err = c.DoStepBridge2(mnemonic)
+		err = c.DoStepBridge2(mnemonic, ctx)
 	}
 	return err
 }
 
-func (c *Client) DoStepBridge(mnemonic string) error {
-	ctx, cancel := c.startChrome()
-	c.cancel = cancel
-
-	defer cancel()
+func (c *Client) DoStepBridge(mnemonic string, ctx context.Context) error {
 
 	meta := metamask.NewMetamask(ctx)
 	err := meta.FirstOpenAndImportAccount(c.cfg.WalletPassword, mnemonic)
@@ -212,10 +216,7 @@ func (c *Client) DoStepBridge(mnemonic string) error {
 	return nil
 }
 
-func (c *Client) DoStepBridge2(mnemonic string) error {
-	ctx, cancel := c.startChrome()
-	defer cancel()
-
+func (c *Client) DoStepBridge2(mnemonic string, ctx context.Context) error {
 	meta := metamask.NewMetamask(ctx)
 	err := meta.FirstOpenAndImportAccount(c.cfg.WalletPassword, mnemonic)
 	if err != nil {
