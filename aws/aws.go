@@ -104,6 +104,10 @@ func (c *Client) AttachNewIP() error {
 	if err != nil {
 		return err
 	}
+	err = c.DeleteIp(name)
+	if err != nil {
+		return err
+	}
 
 	newName := "ip_" + utils.RandStringRunes(6)
 	err = c.CreateIp(newName)
