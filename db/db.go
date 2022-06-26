@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	log2 "log"
-	"math/rand"
 	"os"
 	"path"
 	"time"
@@ -119,13 +118,12 @@ func FindFirstPendingTask(nodeID uint) *StepRun {
 func AddOrUpdateNode(c *cfg.Heartbeat) Node {
 	var n Node
 	DB.First(&n, "node_name = ?", c.NodeName)
-	if n.ID == 0 || n.DnsName != c.DnsName || n.NodeName != c.NodeName || n.Region != c.AWSRegion {
-		n.NodeName = c.NodeName
-		n.DnsName = c.DnsName
-		n.Region = c.AWSRegion
-		DB.Save(&n)
-		log.Infof("update node: %+v", n)
-	}
+
+	n.NodeName = c.NodeName
+	n.DnsName = c.DnsName
+	n.Region = c.AWSRegion
+	DB.Save(&n)
+
 	return n
 }
 
@@ -199,11 +197,8 @@ func SaveOrUpdateIp(name, address string) {
 }
 
 func PickANodeRandom() Node {
-	var c int64
-	DB.Model(&Node{}).Count(&c)
-	r := rand.Intn(int(c))
 	var n Node
-	DB.First(&n, r+1)
+	DB.Model(&Node{}).Order("update_at desc").First(&n)
 	return n
 }
 
