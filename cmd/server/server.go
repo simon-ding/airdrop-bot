@@ -193,27 +193,27 @@ func (s *Server) bridgeOne(a db.Account) error {
 		}
 	}
 
-	ip, err := s.attachOrAllocateAccountIp(a)
-	if err != nil {
-		return errors.Wrap(err, "attachOrAllocateAccountIp")
-	}
-
-	if err := s.doOneStep(a.ID, db.StepArbitrumBridge, ip, 0); err != nil {
+	if err := s.doOneStep(a, db.StepArbitrumBridge, 0); err != nil {
 		return err
 	}
 
-	if err := s.doOneStep(a.ID, db.StepArbitrumBridge2, ip, 0); err != nil {
+	if err := s.doOneStep(a, db.StepArbitrumBridge2, 0); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *Server) doOneStep(accountId uint, sp string, ip *db.StaticIp, retry int) error {
+func (s *Server) doOneStep(a db.Account, sp string, retry int) error {
 
-	if db.StepBeenDone(accountId, sp) {
-		log.Infof("account %d step %s has already been done, skip...", accountId, sp)
+	if db.StepBeenDone(a.ID, sp) {
+		log.Infof("account %d step %s has already been done, skip...", a.ID, sp)
 		return nil
+	}
+
+	ip, err := s.attachOrAllocateAccountIp(a)
+	if err != nil {
+		return errors.Wrap(err, "attachOrAllocateAccountIp")
 	}
 
 	step := db.StepRun{
@@ -221,12 +221,12 @@ func (s *Server) doOneStep(accountId uint, sp string, ip *db.StaticIp, retry int
 		Step:       sp,
 		Status:     db.StatusPending,
 		Reason:     "",
-		AccountID:  accountId,
+		AccountID:  a.ID,
 		NodeID:     ip.NodeID,
 		StaticIpID: ip.ID,
 	}
 	db.DB.Save(&step)
-	log.Infof("add new task to db, account %d, step %+v", accountId, step)
+	log.Infof("add new task to db, account %d, step %+v", a.ID, step)
 
 	i := 0
 loop1:
@@ -236,19 +236,19 @@ loop1:
 		switch step.Status {
 		case db.StatusRunning:
 			if i == 0 {
-				log.Infof("bridge task for account %v begin to run", accountId)
+				log.Infof("bridge task for account %v begin to run", a.ID)
 			}
 			i++
 		case db.StatusSuccess:
-			log.Infof("bridge task for account %v succeed", accountId)
+			log.Infof("bridge task for account %v succeed", a.ID)
 			break loop1
 		case db.StatusFailed: //retry
-			log.Errorf("bridge task for account %v failed, reason: %v", accountId, step.Reason)
+			log.Errorf("bridge task for account %v failed, reason: %v", a.ID, step.Reason)
 			if retry == 3 {
-				return fmt.Errorf("maxium retry exceed for account: %v", accountId)
+				return fmt.Errorf("maxium retry exceed for account: %v", a.ID)
 			}
 			retry++
-			return s.doOneStep(accountId, sp, ip, retry)
+			return s.doOneStep(a, sp, retry)
 		}
 	}
 
