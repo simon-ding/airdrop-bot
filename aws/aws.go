@@ -36,12 +36,12 @@ func (c *Client) CreateIp(name string) error {
 	in := lightsail.AllocateStaticIpInput{
 		StaticIpName: &name,
 	}
-	out, err := c.AllocateStaticIp(context.TODO(), &in)
+	_, err := c.AllocateStaticIp(context.TODO(), &in)
 	if err != nil {
 		return errors.Wrap(err, "new ip")
 	}
 
-	log.Infof("new ip created: %+v", out)
+	log.Infof("new ip created: %+v", name)
 	return nil
 }
 
