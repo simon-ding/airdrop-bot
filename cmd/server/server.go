@@ -182,17 +182,6 @@ func (s *Server) transferEth(address string) error {
 
 func (s *Server) bridgeOne(a db.Account) error {
 
-	if !s.cfg.Owlracle.Disable {
-		for {
-			if s.isGasFeeAcceptable() {
-				log.Infof("gas fee is acceptable, continue")
-				break
-			}
-			log.Infof("will try again in 5min")
-			time.Sleep(5 * time.Minute)
-		}
-	}
-
 	if err := s.doOneStep(a, db.StepArbitrumBridge, 0); err != nil {
 		return err
 	}
@@ -209,6 +198,17 @@ func (s *Server) doOneStep(a db.Account, sp string, retry int) error {
 	if db.StepBeenDone(a.ID, sp) {
 		log.Infof("account %d step %s has already been done, skip...", a.ID, sp)
 		return nil
+	}
+
+	if !s.cfg.Owlracle.Disable {
+		for {
+			if s.isGasFeeAcceptable() {
+				log.Infof("gas fee is acceptable, continue")
+				break
+			}
+			log.Infof("will try again in 5min")
+			time.Sleep(5 * time.Minute)
+		}
 	}
 
 	ip, err := s.attachOrAllocateAccountIp(a)
