@@ -198,7 +198,7 @@ func SaveOrUpdateIp(name, address string) {
 
 func PickANodeRandom() Node {
 	var n Node
-	DB.Order("update_at desc").First(&n)
+	DB.Order("updated_at desc").First(&n)
 	return n
 }
 
