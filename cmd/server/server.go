@@ -16,7 +16,6 @@ import (
 	"math/rand"
 	"net/http"
 	"path"
-	"strconv"
 	"time"
 )
 
@@ -80,7 +79,7 @@ func (s *Server) heartBeat(c *gin.Context) {
 		db.DB.First(&a, step.AccountID)
 		rsp = cfg.HeartbeatResp{
 			Account: a.Mnemonic,
-			Task:    db.StepArbitrumBridge2,
+			Task:    step.Step,
 			TrackID: step.ID,
 			Timeout: time.Minute * 15,
 		}
@@ -115,15 +114,23 @@ func (s *Server) taskStatusUpdate(c *gin.Context) {
 	c.String(http.StatusOK, "success")
 }
 
+type DoBridgeParam struct {
+	From     int  `json:"from"`
+	To       int  `json:"to"`
+	Transfer bool `json:"transfer"`
+}
+
 func (s *Server) bridgeAccounts(c *gin.Context) {
 	if s.lock {
 		c.String(http.StatusBadRequest, "running")
 		return
 	}
-	trans := c.Param("transfer")
-	transfer, err := strconv.ParseBool(trans)
-	if err != nil {
-		transfer = false
+
+	var b DoBridgeParam
+	if err := c.ShouldBindJSON(&b); err != nil {
+		log.Errorf("json error: %v", err)
+		c.String(http.StatusBadRequest, "json error")
+		return
 	}
 
 	s.lock = true
@@ -133,7 +140,7 @@ func (s *Server) bridgeAccounts(c *gin.Context) {
 		}()
 
 		log.Infof("---------- BRIDGE START ------------")
-		if err := s.doBridges(transfer); err != nil {
+		if err := s.doBridges(b); err != nil {
 			log.Errorf("do bridges: %v", err)
 			c.String(http.StatusBadRequest, "")
 		}
@@ -142,15 +149,11 @@ func (s *Server) bridgeAccounts(c *gin.Context) {
 	c.String(http.StatusOK, "")
 }
 
-func (s *Server) doBridges(transfer bool) error {
-	for i := 0; i < s.cfg.AccountsToGen; i++ {
-		account := db.FindAccount(i + 1)
+func (s *Server) doBridges(p DoBridgeParam) error {
+	for i := p.From; i <= p.To; i++ {
+		account := db.FindAccount(i)
 		if account.ID == 0 {
-			log.Errorf("accounts with id %d not found in db, skip it", i+1)
-			continue
-		}
-		if db.StepBeenDone(account.ID, db.StepArbitrumBridge) {
-			log.Infof("account %d bridge has already been done, skip...", account.ID)
+			log.Errorf("accounts with id %d not found in db, skip it", i)
 			continue
 		}
 		//if transfer {
@@ -159,7 +162,7 @@ func (s *Server) doBridges(transfer bool) error {
 		//	}
 		//}
 
-		if err := s.bridgeOne(account, 0); err != nil {
+		if err := s.bridgeOne(account); err != nil {
 			log.Errorf("bridge account %d error: %v", account.ID, err)
 			return err
 		}
@@ -182,7 +185,7 @@ func (s *Server) transferEth(address string) error {
 	return nil
 }
 
-func (s *Server) bridgeOne(a db.Account, retry int) error {
+func (s *Server) bridgeOne(a db.Account) error {
 
 	if !s.cfg.Owlracle.Disable {
 		for {
@@ -199,41 +202,60 @@ func (s *Server) bridgeOne(a db.Account, retry int) error {
 	if err != nil {
 		return errors.Wrap(err, "attachOrAllocateAccountIp")
 	}
+
+	if err := s.doOneStep(a.ID, db.StepArbitrumBridge, ip, 0); err != nil {
+		return err
+	}
+
+	if err := s.doOneStep(a.ID, db.StepArbitrumBridge2, ip, 0); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) doOneStep(accountId uint, sp string, ip *db.StaticIp, retry int) error {
+
+	if db.StepBeenDone(accountId, sp) {
+		log.Infof("account %d step %s has already been done, skip...", accountId, sp)
+		return nil
+	}
+
 	step := db.StepRun{
 		Service:    db.ArbitrumService,
-		Step:       db.StepArbitrumBridge,
+		Step:       sp,
 		Status:     db.StatusPending,
 		Reason:     "",
-		AccountID:  a.ID,
+		AccountID:  accountId,
 		NodeID:     ip.NodeID,
 		StaticIpID: ip.ID,
 	}
 	db.DB.Save(&step)
-	log.Infof("add new task to db, account %d, step %+v", a.ID, step)
+	log.Infof("add new task to db, account %d, step %+v", accountId, step)
+
 	i := 0
-loop:
+loop1:
 	for {
 		time.Sleep(10 * time.Second)
 		db.DB.First(&step, step.ID)
 		switch step.Status {
 		case db.StatusRunning:
 			if i == 0 {
-				log.Infof("bridge task for account %v begin to run", a.ID)
+				log.Infof("bridge task for account %v begin to run", accountId)
 			}
 			i++
 		case db.StatusSuccess:
-			log.Infof("bridge task for account %v succeed", a.ID)
-			break loop
+			log.Infof("bridge task for account %v succeed", accountId)
+			break loop1
 		case db.StatusFailed: //retry
-			log.Errorf("bridge task for account %v failed, reason: %v", a.ID, step.Reason)
+			log.Errorf("bridge task for account %v failed, reason: %v", accountId, step.Reason)
 			if retry == 3 {
-				return fmt.Errorf("maxium retry exceed for account: %v", a.ID)
+				return fmt.Errorf("maxium retry exceed for account: %v", accountId)
 			}
 			retry++
-			return s.bridgeOne(a, retry)
+			return s.doOneStep(accountId, sp, ip, retry)
 		}
 	}
-
 	return nil
 }
 

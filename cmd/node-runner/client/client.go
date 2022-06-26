@@ -159,6 +159,18 @@ func (c *Client) startChrome() (context.Context, func()) {
 }
 
 func (c *Client) BridgeOne(mnemonic string, step string) error {
+
+	var err error
+	switch step {
+	case db.StepArbitrumBridge:
+		err = c.DoStepBridge(mnemonic)
+	case db.StepArbitrumBridge2:
+		err = c.DoStepBridge2(mnemonic)
+	}
+	return err
+}
+
+func (c *Client) DoStepBridge(mnemonic string) error {
 	ctx, cancel := c.startChrome()
 	defer cancel()
 
@@ -167,34 +179,41 @@ func (c *Client) BridgeOne(mnemonic string, step string) error {
 	if err != nil {
 		return err
 	}
-
-	if step == db.StepArbitrumBridge2 {
-		log.Infof("bridge from arbitrum to op")
-		err = meta.OpenChanListAndAddNetwork("Arbitrum One")
-		if err != nil {
-			return errors.Wrap(err, "add arb")
-		}
-
-		balance, err := meta.Balance()
-		log.Infof("account current balance is %v", balance)
-		if err == nil && balance != 0 {
-			hop := services.MewHop(meta.Context(), meta, "ETH", "arbitrum", "optimism")
-			err = hop.LinkMetaMask()
-			if err != nil {
-				return err
-			}
-			log.Infof("hop link metamask success")
-
-			err = hop.BridgeMoney(balance - cfg.BridgeReverse)
-			if err != nil {
-				return errors.Wrap(err, "arb deposit")
-			}
-
-			balance = meta.WaitForBalanceChange(balance)
-		}
-
+	log.Infof("bridge from arbitrum to op")
+	err = meta.OpenChanListAndAddNetwork("Arbitrum One")
+	if err != nil {
+		return errors.Wrap(err, "add arb")
 	}
 
+	balance, err := meta.Balance()
+	log.Infof("account current balance is %v", balance)
+	if err == nil && balance != 0 {
+		hop := services.MewHop(meta.Context(), meta, "ETH", "arbitrum", "optimism")
+		err = hop.LinkMetaMask()
+		if err != nil {
+			return err
+		}
+		log.Infof("hop link metamask success")
+
+		err = hop.BridgeMoney(balance - cfg.BridgeReverse)
+		if err != nil {
+			return errors.Wrap(err, "arb deposit")
+		}
+
+		balance = meta.WaitForBalanceChange(balance)
+	}
+	return nil
+}
+
+func (c *Client) DoStepBridge2(mnemonic string) error {
+	ctx, cancel := c.startChrome()
+	defer cancel()
+
+	meta := metamask.NewMetamask(ctx)
+	err := meta.FirstOpenAndImportAccount(c.cfg.WalletPassword, mnemonic)
+	if err != nil {
+		return err
+	}
 	log.Infof("bridge from op to arbitrum")
 	err = meta.OpenChanListAndAddNetwork("Optimism")
 	if err != nil {
@@ -221,5 +240,4 @@ func (c *Client) BridgeOne(mnemonic string, step string) error {
 
 	balance = meta.WaitForBalanceChange(balance)
 	return nil
-
 }
