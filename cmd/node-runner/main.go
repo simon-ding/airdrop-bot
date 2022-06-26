@@ -32,7 +32,7 @@ func main() {
 		go func() {
 			b, err := exec.Command("Xvfb", ":1", "-screen", "0", res).Output()
 			if err != nil {
-				log.Errorf("run xvfb error: %v:　%v", string(b), err)
+				log.Panicf("run xvfb error: %v:　%v", string(b), err)
 			}
 		}()
 		os.Setenv("DISPLAY", ":1")
