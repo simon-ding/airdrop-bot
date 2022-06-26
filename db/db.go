@@ -99,7 +99,7 @@ func StepBeenDone(accountId uint, step string) bool {
 	if s.Status == StatusSuccess {
 		return true
 	}
-	err := DB.Where("account_id = ?", accountId).Delete(&StepRun{}).Error
+	err := DB.Where("account_id = ? AND step = ?", accountId, step).Delete(&StepRun{}).Error
 	if err != nil {
 		log.Errorf("delete step: %v", err)
 	}

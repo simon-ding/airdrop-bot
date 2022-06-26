@@ -252,7 +252,7 @@ loop1:
 		}
 	}
 
-	t := time.Minute * time.Duration(rand.Intn(10)+10)
+	t := time.Minute * time.Duration(rand.Intn(10))
 	log.Infof("--- sleep for %v ---", t)
 	time.Sleep(t)
 
