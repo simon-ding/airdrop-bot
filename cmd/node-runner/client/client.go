@@ -30,6 +30,7 @@ type Client struct {
 	cfg    *cfg.NodeConfig
 	http   *http.Client
 	locked bool
+	cancel func()
 }
 
 func (c *Client) Heartbeat() error {
@@ -85,6 +86,10 @@ func (c *Client) Heartbeat() error {
 		select {
 		case <-t:
 			err = fmt.Errorf("timeout")
+			if c.cancel != nil {
+				log.Infof("close browser")
+				c.cancel() //close browser
+			}
 		case x := <-ch:
 			err = x
 		}
@@ -172,6 +177,8 @@ func (c *Client) BridgeOne(mnemonic string, step string) error {
 
 func (c *Client) DoStepBridge(mnemonic string) error {
 	ctx, cancel := c.startChrome()
+	c.cancel = cancel
+
 	defer cancel()
 
 	meta := metamask.NewMetamask(ctx)
