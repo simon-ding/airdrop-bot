@@ -163,9 +163,6 @@ func (s *Server) doBridges(p DoBridgeParam) error {
 			log.Errorf("bridge account %d error: %v", account.ID, err)
 			return err
 		}
-		t := time.Minute * time.Duration(rand.Intn(10)+10)
-		log.Infof("--- sleep for %v ---", t)
-		time.Sleep(t)
 
 	}
 	return nil
@@ -253,6 +250,11 @@ loop1:
 			return s.doOneStep(accountId, sp, ip, retry)
 		}
 	}
+
+	t := time.Minute * time.Duration(rand.Intn(10)+10)
+	log.Infof("--- sleep for %v ---", t)
+	time.Sleep(t)
+
 	return nil
 }
 
