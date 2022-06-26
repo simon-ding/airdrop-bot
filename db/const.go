@@ -6,4 +6,5 @@ const (
 	StepArbitrumDeposit     = "arbitrum_deposit"
 	StepArbitrumBridge      = "bridge"
 	StepArbitrumBridge2     = "bridge2"
+	StepArbitrumTransfer    = "arbitrum_transfer"
 )

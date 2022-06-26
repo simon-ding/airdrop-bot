@@ -153,11 +153,11 @@ func (s *Server) doBridges(p DoBridgeParam) error {
 			log.Errorf("accounts with id %d not found in db, skip it", i)
 			continue
 		}
-		//if transfer {
-		//	if err := s.transferEth(account.Address); err != nil {
-		//		log.Errorf("withdraw from binance error: %v", err)
-		//	}
-		//}
+		if p.Transfer {
+			if err := s.transferEth(account); err != nil {
+				log.Errorf("withdraw from binance error: %v", err)
+			}
+		}
 		log.Infof("begin bridge account: %v", account.Address)
 
 		if err := s.bridgeOne(account); err != nil {
@@ -169,31 +169,64 @@ func (s *Server) doBridges(p DoBridgeParam) error {
 	return nil
 }
 
-func (s *Server) transferEth(address string) error {
-	amount := 0.015 + rand.Float64()/100
-	log.Infof("transfer enabled, transfer %v eth to address %v", amount, address)
+func (s *Server) transferEth(a db.Account) error {
+	if db.StepBeenDone(a.ID, db.StepArbitrumTransfer) {
+		log.Infof("account %d step %s has already been done, skip...", a.ID, db.StepArbitrumTransfer)
+		return nil
+	}
 
-	err := s.bn.WithdrawEth("ARBITRUM", address, amount)
+	amount := 0.015 + rand.Float64()/100
+	log.Infof("transfer enabled, transfer %v eth to address %v", amount, a.Address)
+
+	err := s.bn.WithdrawEth("ARBITRUM", a.Address, amount)
 	if err != nil {
 		return err
 	}
+
+	step := db.StepRun{
+		Service:   db.ArbitrumService,
+		Step:      db.StepArbitrumTransfer,
+		Status:    db.StatusSuccess,
+		Reason:    "",
+		AccountID: a.ID,
+	}
+	db.DB.Save(&step)
+
 	return nil
+}
+
+func (s *Server) pickNodeToRun() (*db.Node, error) {
+	node := db.PickANodeRandom()
+	log.Infof("node %v selected for the task: %+v", node.NodeName, node)
+	lightsail, err := aws.CreateLightsailClient(node.NodeName, node.Region, path.Join(s.cfg.Dir, "aws.config"))
+	if err != nil {
+		return nil, errors.Wrap(err, "create lightsail client")
+	}
+	if err := lightsail.AttachNewIP(); err != nil {
+		return nil, err
+	}
+
+	return &node, nil
 }
 
 func (s *Server) bridgeOne(a db.Account) error {
-
-	if err := s.doOneStep(a, db.StepArbitrumBridge, 0); err != nil {
+	node, err := s.pickNodeToRun()
+	if err != nil {
 		return err
 	}
 
-	if err := s.doOneStep(a, db.StepArbitrumBridge2, 0); err != nil {
+	if err := s.doOneStep(a, *node, db.StepArbitrumBridge, 0); err != nil {
+		return err
+	}
+
+	if err := s.doOneStep(a, *node, db.StepArbitrumBridge2, 0); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *Server) doOneStep(a db.Account, sp string, retry int) error {
+func (s *Server) doOneStep(a db.Account, node db.Node, sp string, retry int) error {
 
 	if db.StepBeenDone(a.ID, sp) {
 		log.Infof("account %d step %s has already been done, skip...", a.ID, sp)
@@ -211,19 +244,13 @@ func (s *Server) doOneStep(a db.Account, sp string, retry int) error {
 		}
 	}
 
-	ip, err := s.attachOrAllocateAccountIp(a)
-	if err != nil {
-		return errors.Wrap(err, "attachOrAllocateAccountIp")
-	}
-
 	step := db.StepRun{
-		Service:    db.ArbitrumService,
-		Step:       sp,
-		Status:     db.StatusPending,
-		Reason:     "",
-		AccountID:  a.ID,
-		NodeID:     ip.NodeID,
-		StaticIpID: ip.ID,
+		Service:   db.ArbitrumService,
+		Step:      sp,
+		Status:    db.StatusPending,
+		Reason:    "",
+		AccountID: a.ID,
+		NodeID:    node.ID,
 	}
 	db.DB.Save(&step)
 	log.Infof("add new task to db, account %d, step %+v", a.ID, step)
@@ -248,7 +275,7 @@ loop1:
 				return fmt.Errorf("maxium retry exceed for account: %v", a.ID)
 			}
 			retry++
-			return s.doOneStep(a, sp, retry)
+			return s.doOneStep(a, node, sp, retry)
 		}
 	}
 
