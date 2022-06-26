@@ -158,6 +158,7 @@ func (s *Server) doBridges(p DoBridgeParam) error {
 		//		log.Errorf("withdraw from binance error: %v", err)
 		//	}
 		//}
+		log.Infof("begin bridge account: %v", account.Address)
 
 		if err := s.bridgeOne(account); err != nil {
 			log.Errorf("bridge account %d error: %v", account.ID, err)
