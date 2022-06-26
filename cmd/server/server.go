@@ -206,6 +206,16 @@ func (s *Server) pickNodeToRun() (*db.Node, error) {
 		return nil, err
 	}
 
+	//更新cloudflare dns
+	if _, address, err := lightsail.GetAttachedIp(); err == nil {
+		err := s.cf.UpdateDnsRecord(node.DnsName, address)
+		if err != nil {
+			log.Infof("update cloudflare dns record error: %v", err)
+		} else {
+			log.Infof("update cloudflare dns record success")
+		}
+	}
+
 	return &node, nil
 }
 

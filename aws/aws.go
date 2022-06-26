@@ -48,11 +48,11 @@ func (c *Client) CreateIp(name string) error {
 func (c *Client) DetachIp(name string) error {
 	in := lightsail.DetachStaticIpInput{StaticIpName: &name}
 
-	out, err := c.Client.DetachStaticIp(context.TODO(), &in)
+	_, err := c.Client.DetachStaticIp(context.TODO(), &in)
 	if err != nil {
 		return errors.Wrap(err, "detach ip")
 	}
-	log.Infof("ip %s detach success: %+v", name, out)
+	log.Infof("ip %s detach success", name)
 	return nil
 }
 
@@ -62,11 +62,11 @@ func (c *Client) AttachIp(name string) error {
 		StaticIpName: &name,
 	}
 
-	out, err := c.Client.AttachStaticIp(context.TODO(), &in)
+	_, err := c.Client.AttachStaticIp(context.TODO(), &in)
 	if err != nil {
 		return errors.Wrap(err, "attach ip")
 	}
-	log.Infof("attach ip %s to instance %s success: %+v", name, c.instanceName, out)
+	log.Infof("attach ip %s to instance %s success", name, c.instanceName)
 	return nil
 }
 
@@ -86,11 +86,11 @@ func (c *Client) GetAttachedIp() (string, string, error) {
 
 func (c *Client) DeleteIp(ipName string) error {
 	in := lightsail.ReleaseStaticIpInput{StaticIpName: &ipName}
-	out, err := c.Client.ReleaseStaticIp(context.TODO(), &in)
+	_, err := c.Client.ReleaseStaticIp(context.TODO(), &in)
 	if err != nil {
 		return errors.Wrap(err, "release ip")
 	}
-	log.Infof("release ip success: %+v", out)
+	log.Infof("release ip %s success", ipName)
 	return nil
 }
 
