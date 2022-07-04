@@ -33,5 +33,5 @@ func TestNew(t *testing.T) {
 
 	client := client2.New(&cfg1.Node)
 
-	client.BridgeOne("")
+	client.BridgeOne("", "")
 }
