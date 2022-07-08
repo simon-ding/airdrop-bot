@@ -9,6 +9,7 @@ import (
 	"airdrop-bot/log"
 	"context"
 	"fmt"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -67,6 +68,7 @@ func AddOrUpdateNode(c *cfg.Heartbeat) *ent.Node {
 		}
 		n = n1
 	}
+	Client.Node.Update().Where(node.ID(n.ID)).SetUpdatedAt(time.Now()).ExecX(context.Background())
 	return n
 }
 
