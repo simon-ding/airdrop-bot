@@ -10,12 +10,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/chromedp/chromedp"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"path"
 	"time"
+
+	"github.com/chromedp/chromedp"
+	"github.com/pkg/errors"
 )
 
 func New(cfg *cfg.NodeConfig) *Client {
@@ -109,7 +110,7 @@ func (c *Client) closeBrowser() {
 	}
 }
 
-func (c *Client) updateTaskStatus(trackId uint, err error) error {
+func (c *Client) updateTaskStatus(trackId int, err error) error {
 	log.Infof("begin update task status: %v, err: %v", trackId, err)
 	ts := cfg.TaskStatus{
 		TrackID: trackId,
