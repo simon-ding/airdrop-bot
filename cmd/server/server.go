@@ -6,17 +6,21 @@ import (
 	"airdrop-bot/cfg"
 	"airdrop-bot/cloudflare"
 	"airdrop-bot/db"
+	"airdrop-bot/ent"
+	"airdrop-bot/ent/steprun"
 	"airdrop-bot/log"
 	"airdrop-bot/metamask"
 	"airdrop-bot/services"
 	"airdrop-bot/utils"
+	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	"math/rand"
 	"net/http"
 	"path"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 )
 
 func NewServer(cfg *cfg.ServerConfig) (*Server, error) {
@@ -75,8 +79,11 @@ func (s *Server) heartBeat(c *gin.Context) {
 	step := db.FindFirstPendingTask(node.ID)
 
 	if step != nil {
-		var a db.Account
-		db.DB.First(&a, step.AccountID)
+		a, err := db.Client.Account.Get(context.TODO(), step.Edges.Account.ID)
+		if err != nil {
+			log.Errorf("query account error: %v", err)
+		}
+
 		rsp = cfg.HeartbeatResp{
 			Account: a.Mnemonic,
 			Task:    step.Step,
@@ -84,8 +91,7 @@ func (s *Server) heartBeat(c *gin.Context) {
 			Timeout: time.Minute * 15,
 		}
 		log.Infof("bridge task of account %v has activated", a.ID)
-		step.Status = db.StatusRunning
-		db.DB.Save(&step)
+		db.Client.StepRun.Update().Where(steprun.ID(step.ID)).SetStatus(steprun.StatusRunning).Save(context.TODO())
 	}
 	c.JSON(http.StatusOK, rsp)
 }
@@ -97,16 +103,16 @@ func (s *Server) taskStatusUpdate(c *gin.Context) {
 		c.String(http.StatusBadRequest, "")
 		return
 	}
-	var step db.StepRun
-	db.DB.First(&step, ts.TrackID)
-	if ts.Result == cfg.ResultSuccess {
-		step.Status = db.StatusSuccess
-	} else if ts.Result == cfg.ResultFail {
-		step.Status = db.StatusFailed
-		step.Reason = ts.Reason
+	var ss steprun.Status
+	switch ts.Result {
+	case cfg.ResultFail:
+		ss = steprun.StatusFailed
+	case cfg.ResultSuccess:
+		ss = steprun.StatusSuccess
 	}
-	db.DB.Save(&step)
-	log.Infof("success update task status: %+v", step)
+	db.Client.StepRun.Update().Where(steprun.ID(ts.TrackID)).SetStatus(ss).SetReason(ts.Reason).Exec(context.Background())
+
+	log.Infof("success update task status: %+v", ts)
 
 	c.String(http.StatusOK, "success")
 }
@@ -169,7 +175,7 @@ func (s *Server) doBridges(p DoBridgeParam) error {
 	return nil
 }
 
-func (s *Server) transferEth(a db.Account) error {
+func (s *Server) transferEth(a *ent.Account) error {
 	if db.StepBeenDone(a.ID, db.StepArbitrumTransfer) {
 		log.Infof("account %d step %s has already been done, skip...", a.ID, db.StepArbitrumTransfer)
 		return nil
@@ -182,23 +188,16 @@ func (s *Server) transferEth(a db.Account) error {
 	if err != nil {
 		return err
 	}
-
-	step := db.StepRun{
-		Service:   db.ArbitrumService,
-		Step:      db.StepArbitrumTransfer,
-		Status:    db.StatusSuccess,
-		Reason:    "",
-		AccountID: a.ID,
-	}
-	db.DB.Save(&step)
+	db.Client.StepRun.Create().
+		SetAccount(a).SetStep(db.StepArbitrumTransfer).SetStatus(steprun.StatusSuccess).Exec(context.Background())
 
 	return nil
 }
 
-func (s *Server) pickNodeToRun() (*db.Node, error) {
+func (s *Server) pickNodeToRun() (*ent.Node, error) {
 	node := db.PickANodeRandom()
-	log.Infof("node %v selected for the task: %+v", node.NodeName, node)
-	lightsail, err := aws.CreateLightsailClient(node.NodeName, node.Region, path.Join(s.cfg.Dir, "aws.config"))
+	log.Infof("node %v selected for the task: %+v", node.Name, node)
+	lightsail, err := aws.CreateLightsailClient(node.Name, node.Region, path.Join(s.cfg.Dir, "aws.config"))
 	if err != nil {
 		return nil, errors.Wrap(err, "create lightsail client")
 	}
@@ -216,27 +215,27 @@ func (s *Server) pickNodeToRun() (*db.Node, error) {
 		}
 	}
 
-	return &node, nil
+	return node, nil
 }
 
-func (s *Server) bridgeOne(a db.Account) error {
+func (s *Server) bridgeOne(a *ent.Account) error {
 	node, err := s.pickNodeToRun()
 	if err != nil {
 		return err
 	}
 
-	if err := s.doOneStep(a, *node, db.StepArbitrumBridge, 0); err != nil {
+	if err := s.doOneStep(a, node, db.StepArbitrumBridge, 0); err != nil {
 		return err
 	}
 
-	if err := s.doOneStep(a, *node, db.StepArbitrumBridge2, 0); err != nil {
+	if err := s.doOneStep(a, node, db.StepArbitrumBridge2, 0); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *Server) doOneStep(a db.Account, node db.Node, sp string, retry int) error {
+func (s *Server) doOneStep(a *ent.Account, node *ent.Node, sp string, retry int) error {
 
 	if db.StepBeenDone(a.ID, sp) {
 		log.Infof("account %d step %s has already been done, skip...", a.ID, sp)
@@ -254,32 +253,25 @@ func (s *Server) doOneStep(a db.Account, node db.Node, sp string, retry int) err
 		}
 	}
 
-	step := db.StepRun{
-		Service:   db.ArbitrumService,
-		Step:      sp,
-		Status:    db.StatusPending,
-		Reason:    "",
-		AccountID: a.ID,
-		NodeID:    node.ID,
-	}
-	db.DB.Save(&step)
+	step := db.Client.StepRun.Create().
+		SetAccount(a).SetStep(sp).SetStatus(steprun.StatusPending).SetNode(node).SaveX(context.Background())
 	log.Infof("add new task to db, account %d, step %+v", a.ID, step)
 
 	i := 0
 loop1:
 	for {
 		time.Sleep(10 * time.Second)
-		db.DB.First(&step, step.ID)
+		step = db.Client.StepRun.GetX(context.Background(), step.ID)
 		switch step.Status {
-		case db.StatusRunning:
+		case steprun.StatusRunning:
 			if i == 0 {
 				log.Infof("bridge task for account %v begin to run", a.ID)
 			}
 			i++
-		case db.StatusSuccess:
+		case steprun.StatusSuccess:
 			log.Infof("bridge task for account %v succeed", a.ID)
 			break loop1
-		case db.StatusFailed: //retry
+		case steprun.StatusFailed: //retry
 			log.Errorf("bridge task for account %v failed, reason: %v", a.ID, step.Reason)
 			if retry == 3 {
 				return fmt.Errorf("maxium retry exceed for account: %v", a.ID)
@@ -296,108 +288,108 @@ loop1:
 	return nil
 }
 
-func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
+// func (s *Server) attachOrAllocateAccountIp(a db.Account) (*db.StaticIp, error) {
 
-	var allocatedIP *db.StaticIp
-	ip, ok := db.AccountHasIp(a.StaticIpID)
-	if !ok {
-		log.Infof("account has no associated ip: %v", a.ID)
-		/*
-			账户没有关联的ip，从节点中随机选取一个节点。如果节点ip关联的账号没有达到最大限制，则使用此ip，反之创建一个新的ip
-		*/
+// 	var allocatedIP *db.StaticIp
+// 	ip, ok := db.AccountHasIp(a.StaticIpID)
+// 	if !ok {
+// 		log.Infof("account has no associated ip: %v", a.ID)
+// 		/*
+// 			账户没有关联的ip，从节点中随机选取一个节点。如果节点ip关联的账号没有达到最大限制，则使用此ip，反之创建一个新的ip
+// 		*/
 
-		//等待分配ip
-		node := db.PickANodeRandom()
-		log.Infof("node %v selected for the task: %+v", node.NodeName, node)
-		lightsail, err := aws.CreateLightsailClient(node.NodeName, node.Region, path.Join(s.cfg.Dir, "aws.config"))
-		if err != nil {
-			return nil, errors.Wrap(err, "create lightsail client")
-		}
-		attachedIpName, _, err := lightsail.GetAttachedIp()
-		if err != nil {
-			return nil, errors.Wrap(err, "get attached static ip")
-		}
+// 		//等待分配ip
+// 		node := db.PickANodeRandom()
+// 		log.Infof("node %v selected for the task: %+v", node.NodeName, node)
+// 		lightsail, err := aws.CreateLightsailClient(node.NodeName, node.Region, path.Join(s.cfg.Dir, "aws.config"))
+// 		if err != nil {
+// 			return nil, errors.Wrap(err, "create lightsail client")
+// 		}
+// 		attachedIpName, _, err := lightsail.GetAttachedIp()
+// 		if err != nil {
+// 			return nil, errors.Wrap(err, "get attached static ip")
+// 		}
 
-		ip2 := db.GetOrAddIp(attachedIpName, node.ID)
-		count := db.IpRelatedAccountNum(ip2.ID)
-		if count >= s.cfg.AccountsPerIp { //当前ip超过允许的最大数量，换新的ip
-			log.Infof("attached ip has reached upper accounts limit: %v", ip2.Name)
-			newIpName := "airdrop_bot_" + utils.RandStringRunes(4)
-			if err := lightsail.CreateIp(newIpName); err != nil {
-				return nil, errors.Wrap(err, "create ip")
-			}
+// 		ip2 := db.GetOrAddIp(attachedIpName, node.ID)
+// 		count := db.IpRelatedAccountNum(ip2.ID)
+// 		if count >= s.cfg.AccountsPerIp { //当前ip超过允许的最大数量，换新的ip
+// 			log.Infof("attached ip has reached upper accounts limit: %v", ip2.Name)
+// 			newIpName := "airdrop_bot_" + utils.RandStringRunes(4)
+// 			if err := lightsail.CreateIp(newIpName); err != nil {
+// 				return nil, errors.Wrap(err, "create ip")
+// 			}
 
-			if err := lightsail.DetachIp(attachedIpName); err != nil {
-				return nil, errors.Wrap(err, "lightsail detach ip")
-			}
-			newIp := db.GetOrAddIp(newIpName, node.ID) //save new ip to db
-			newIp.NodeID = node.ID
-			db.DB.Save(&newIp) //更新node id
+// 			if err := lightsail.DetachIp(attachedIpName); err != nil {
+// 				return nil, errors.Wrap(err, "lightsail detach ip")
+// 			}
+// 			newIp := db.GetOrAddIp(newIpName, node.ID) //save new ip to db
+// 			newIp.NodeID = node.ID
+// 			db.DB.Save(&newIp) //更新node id
 
-			a.StaticIpID = newIp.ID
-			db.DB.Save(&a)
+// 			a.StaticIpID = newIp.ID
+// 			db.DB.Save(&a)
 
-			if err := lightsail.AttachIp(newIpName); err != nil {
-				return nil, errors.Wrap(err, "attch ip")
-			}
-			allocatedIP = &newIp
-		} else { //使用当前attachedIp
-			log.Infof("num of accounts associated with current ip %v, use attached ip", count)
+// 			if err := lightsail.AttachIp(newIpName); err != nil {
+// 				return nil, errors.Wrap(err, "attch ip")
+// 			}
+// 			allocatedIP = &newIp
+// 		} else { //使用当前attachedIp
+// 			log.Infof("num of accounts associated with current ip %v, use attached ip", count)
 
-			a.StaticIpID = ip2.ID
-			db.DB.Save(&a)
+// 			a.StaticIpID = ip2.ID
+// 			db.DB.Save(&a)
 
-			allocatedIP = &ip2
-		}
-		if _, address, err := lightsail.GetAttachedIp(); err == nil {
-			err := s.cf.UpdateDnsRecord(node.DnsName, address)
-			if err != nil {
-				log.Infof("update cloudflare dns record error: %v", err)
-			} else {
-				log.Infof("update cloudflare dns record success")
-			}
-		}
+// 			allocatedIP = &ip2
+// 		}
+// 		if _, address, err := lightsail.GetAttachedIp(); err == nil {
+// 			err := s.cf.UpdateDnsRecord(node.DnsName, address)
+// 			if err != nil {
+// 				log.Infof("update cloudflare dns record error: %v", err)
+// 			} else {
+// 				log.Infof("update cloudflare dns record success")
+// 			}
+// 		}
 
-	} else { //账户存在指定ip，如果当前ip是指定ip，就是用当前ip，如果不是切换ip
-		log.Infof("accounts has associated ip, use this ip: %+v", ip)
+// 	} else { //账户存在指定ip，如果当前ip是指定ip，就是用当前ip，如果不是切换ip
+// 		log.Infof("accounts has associated ip, use this ip: %+v", ip)
 
-		allocatedIP = ip
-		var node db.Node
-		db.DB.First(&node, ip.NodeID)
-		lightsail, err := aws.CreateLightsailClient(node.NodeName, node.Region, path.Join(s.cfg.Dir, "aws.config"))
-		if err != nil {
-			return nil, errors.Wrap(err, "create lightsail client")
-		}
-		attachedIpName, _, err := lightsail.GetAttachedIp()
-		if err != nil {
-			return nil, errors.Wrap(err, "get attached static ip")
-		}
+// 		allocatedIP = ip
+// 		var node db.Node
+// 		db.DB.First(&node, ip.NodeID)
+// 		lightsail, err := aws.CreateLightsailClient(node.NodeName, node.Region, path.Join(s.cfg.Dir, "aws.config"))
+// 		if err != nil {
+// 			return nil, errors.Wrap(err, "create lightsail client")
+// 		}
+// 		attachedIpName, _, err := lightsail.GetAttachedIp()
+// 		if err != nil {
+// 			return nil, errors.Wrap(err, "get attached static ip")
+// 		}
 
-		if ip.Name != attachedIpName {
-			//attached ip is not the desired ip
-			log.Infof("attached ip is not the desired ip: %v", attachedIpName)
-			err := lightsail.DetachIp(attachedIpName)
-			if err != nil {
-				return nil, errors.Wrap(err, "detach ip")
-			}
-			err = lightsail.AttachIp(ip.Name)
-			if err != nil {
-				return nil, errors.Wrap(err, "attach ip")
-			}
-		}
-		//更新cloudflare dns
-		if _, address, err := lightsail.GetAttachedIp(); err == nil {
-			err := s.cf.UpdateDnsRecord(node.DnsName, address)
-			if err != nil {
-				log.Infof("update cloudflare dns record error: %v", err)
-			} else {
-				log.Infof("update cloudflare dns record success")
-			}
-		}
+// 		if ip.Name != attachedIpName {
+// 			//attached ip is not the desired ip
+// 			log.Infof("attached ip is not the desired ip: %v", attachedIpName)
+// 			err := lightsail.DetachIp(attachedIpName)
+// 			if err != nil {
+// 				return nil, errors.Wrap(err, "detach ip")
+// 			}
+// 			err = lightsail.AttachIp(ip.Name)
+// 			if err != nil {
+// 				return nil, errors.Wrap(err, "attach ip")
+// 			}
+// 		}
+// 		//更新cloudflare dns
+// 		if _, address, err := lightsail.GetAttachedIp(); err == nil {
+// 			err := s.cf.UpdateDnsRecord(node.DnsName, address)
+// 			if err != nil {
+// 				log.Infof("update cloudflare dns record error: %v", err)
+// 			} else {
+// 				log.Infof("update cloudflare dns record success")
+// 			}
+// 		}
 
-	}
-	return allocatedIP, nil
-}
+// 	}
+// 	return allocatedIP, nil
+// }
 
 func (s *Server) FirstRunGenAccount() {
 	num := s.cfg.AccountsToGen
@@ -409,13 +401,8 @@ func (s *Server) FirstRunGenAccount() {
 	log.Infof("try to generate %d accounts", num-accountNum)
 	for i := 0; i < num-accountNum; i++ {
 		mnemonic, address, priKey := utils.NewEthAccount()
-		a := db.Account{
-			Mnemonic:   mnemonic,
-			Address:    address,
-			PrivateKey: priKey,
-		}
 		log.Infof("generate eth account: %s", address)
-		db.SaveAccount(&a)
+		db.SaveAccount(mnemonic, address, priKey)
 	}
 }
 

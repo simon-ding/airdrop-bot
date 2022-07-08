@@ -2,6 +2,7 @@ package cfg
 
 import (
 	"airdrop-bot/log"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
@@ -25,6 +26,7 @@ type ServerConfig struct {
 	Binance          Binance    `mapstructure:"binance"`
 	Token            string     `mapstructure:"token"`
 	Dir              string     `mapstructure:"dir"`
+	DbFile           string     `mapstructure:"dbFile"`
 }
 
 type NodeConfig struct {

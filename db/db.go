@@ -2,208 +2,102 @@ package db
 
 import (
 	"airdrop-bot/cfg"
+	"airdrop-bot/ent"
+	"airdrop-bot/ent/account"
+	"airdrop-bot/ent/node"
+	"airdrop-bot/ent/steprun"
 	"airdrop-bot/log"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-	log2 "log"
-	"os"
-	"path"
-	"time"
+	"context"
+	"fmt"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
 	ArbitrumService = "arbitrum"
 )
 
-// Account 代表metamask里的一个账户
-type Account struct {
-	gorm.Model
-	Mnemonic   string `json:"mnemonic"`
-	Address    string `json:"address"`
-	PrivateKey string `json:"privateKey"`
-	StaticIpID uint
-	Steps      []StepRun
-}
-
-type StepRun struct {
-	gorm.Model
-	Service    string
-	Step       string
-	Status     Status
-	Reason     string
-	AccountID  uint
-	NodeID     uint
-	StaticIpID uint
-}
-
-type Status int
-
-const (
-	StatusPending Status = iota
-	StatusRunning
-	StatusSuccess
-	StatusFailed
-)
-
-// StaticIp 代表aws分配的一个ip，它可以和metamask里的一个或多个账号绑定
-type StaticIp struct {
-	gorm.Model
-	Name     string    `json:"name,omitempty"`
-	Ip       string    `json:"ip,omitempty"`
-	Accounts []Account `json:"accounts,omitempty"`
-	NodeID   uint
-}
-
-type Node struct {
-	gorm.Model
-	NodeName  string
-	Region    string
-	DnsName   string
-	NodeIp    string
-	StaticIps []StaticIp
-}
-
-var DB *gorm.DB
+var Client *ent.Client
 
 func Open(dir string) {
-	newLogger := logger.New(
-		log2.New(os.Stdout, "\r\n", log2.LstdFlags), // io writer
-		logger.Config{
-			SlowThreshold:             time.Second,  // Slow SQL threshold
-			LogLevel:                  logger.Error, // Log level
-			IgnoreRecordNotFoundError: true,         // Ignore ErrRecordNotFound error for logger
-			Colorful:                  false,        // Disable color
-		},
-	)
 
-	db1, err := gorm.Open(sqlite.Open(path.Join(dir, "test.db")), &gorm.Config{Logger: newLogger})
+	client, err := ent.Open("sqlite3", fmt.Sprintf("file:%v?&cache=shared&_fk=1", dir))
 	if err != nil {
-		panic("failed to connect database")
+		log.Panicf("failed opening connection to sqlite: %v", err)
 	}
-	DB = db1
-
-	DB.AutoMigrate(&Account{})
-	DB.AutoMigrate(&StaticIp{})
-	DB.AutoMigrate(&StepRun{})
-	DB.AutoMigrate(&Node{})
+	defer client.Close()
+	// Run the auto migration tool.
+	if err := client.Schema.Create(context.Background()); err != nil {
+		log.Panicf("failed creating schema resources: %v", err)
+	}
+	Client = client
 }
 
-func StepBeenDone(accountId uint, step string) bool {
-	var s StepRun
-	DB.First(&s, "account_id = ? AND step = ?", accountId, step)
-	if s.ID == 0 {
+func StepBeenDone(accountId int, step string) bool {
+	c, err := Client.StepRun.Query().Where(
+		steprun.HasAccountWith(account.ID(int(accountId))),
+		steprun.Step(step),
+	).Count(context.Background())
+	if err != nil {
 		return false
 	}
-	if s.Status == StatusSuccess {
-		return true
-	}
-	err := DB.Where("account_id = ? AND step = ?", accountId, step).Delete(&StepRun{}).Error
-	if err != nil {
-		log.Errorf("delete step: %v", err)
-	}
-	log.Infof("delete step, rerun: %+v", s)
-	return false
+	return c > 0
 }
 
-func FindFirstPendingTask(nodeID uint) *StepRun {
-	var s StepRun
-	DB.First(&s, "status = ? AND node_id = ?", StatusPending, nodeID)
-	if s.ID == 0 {
+func FindFirstPendingTask(nodeID int) *ent.StepRun {
+	s, err := Client.StepRun.Query().Where(
+		steprun.HasNodeWith(node.ID(nodeID)),
+		steprun.StatusEQ(steprun.StatusPending),
+	).First(context.TODO())
+	if err != nil {
+		log.Errorf("query step tun error: %v", err)
 		return nil
 	}
-	return &s
+	return s
 }
 
-func AddOrUpdateNode(c *cfg.Heartbeat) Node {
-	var n Node
-	DB.First(&n, "node_name = ?", c.NodeName)
+func AddOrUpdateNode(c *cfg.Heartbeat) *ent.Node {
 
-	n.NodeName = c.NodeName
-	n.DnsName = c.DnsName
-	n.Region = c.AWSRegion
-	DB.Save(&n)
-
+	n, err := Client.Node.Query().Where(node.Name(c.NodeName)).First(context.Background())
+	if err != nil {
+		log.Infof("node %s not found, save new one", c.NodeName)
+		n1, err := Client.Node.Create().SetName(c.NodeName).SetDnsName(c.DnsName).SetRegion(c.AWSRegion).Save(context.Background())
+		if err != nil {
+			log.Errorf("create node error: %v", err)
+		}
+		n = n1
+	}
 	return n
 }
 
-func FindAccount(id int) Account {
-	var a Account
-	DB.First(&a, id)
-	if a.ID == 0 {
-		log.Errorf("account with id %d not found", id)
+func FindAccount(id int) *ent.Account {
+	a, err := Client.Account.Get(context.Background(), id)
+	if err != nil {
+		log.Errorf("account %d not found: %v", id, err)
+		return nil
 	}
+
 	return a
 }
 
 func AccountNum() int {
-	var c int64
-	DB.Model(&Account{}).Count(&c)
-	return int(c)
-}
-
-func SaveArbitrumStep(accountID uint, step string) {
-	s := StepRun{
-		Service:   ArbitrumService,
-		Step:      step,
-		AccountID: accountID,
+	n, err := Client.Account.Query().Count(context.Background())
+	if err != nil {
+		log.Errorf("count account error: %v", err)
+		return 0
 	}
-	log.Infof("arbitrum service step %s has done", step)
-	DB.Save(&s)
-}
-
-func SaveAccount(a *Account) {
-	DB.Save(a)
-}
-
-func GetOrAddIp(name string, nodeId uint) StaticIp {
-	var ip StaticIp
-	DB.First(&ip, "name = ?", name)
-	if ip.ID == 0 {
-		log.Infof("ip of name %s not found, create one", name)
-		ip.Name = name
-		ip.NodeID = nodeId
-		DB.Save(&ip)
-		log.Infof("save new ip: %+v", ip)
-	}
-	return ip
-}
-
-func IpRelatedAccountNum(ipID uint) int {
-	var n int64
-	DB.Model(&Account{}).Where("static_ip_id = ?", ipID).Count(&n)
-	return int(n)
-}
-
-func AccountHasIp(staticIpId uint) (*StaticIp, bool) {
-	if staticIpId == 0 {
-		return nil, false
-	}
-	var ip StaticIp
-	DB.First(&ip, staticIpId)
-
-	return &ip, true
-}
-
-func SaveOrUpdateIp(name, address string) {
-	var ip StaticIp
-	DB.First(&ip, "name = ?", name)
-	if ip.ID == 0 || ip.Ip != address {
-		//not found or need update
-		ip.Name = name
-		ip.Ip = address
-		DB.Save(&ip)
-	}
-}
-
-func PickANodeRandom() Node {
-	var n Node
-	DB.Order("updated_at desc").First(&n)
 	return n
 }
 
-func nodeHasRunningTask(nodeID uint) bool {
-	var c int64
-	DB.Model(&StepRun{}).Where("status = ?", nodeID).Count(&c)
-	return c != 0
+func SaveAccount(mnemonic string, address string, privateKey string) {
+	Client.Account.Create().SetAddress(address).SetMnemonic(mnemonic).SetPrivateKey(privateKey).Save(context.Background())
+}
+
+func PickANodeRandom() *ent.Node {
+	n, err := Client.Node.Query().Order(ent.Desc(node.FieldUpdatedAt)).First(context.Background())
+	if err != nil {
+		log.Errorf("query node error: %v", err)
+		return nil
+	}
+	return n
 }

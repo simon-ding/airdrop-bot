@@ -12,12 +12,12 @@ type Heartbeat struct {
 type HeartbeatResp struct {
 	Account string        `json:"account"`
 	Task    string        `json:"task"`
-	TrackID uint          `json:"trackID"`
+	TrackID int           `json:"trackID"`
 	Timeout time.Duration `json:"timeout"`
 }
 
 type TaskStatus struct {
-	TrackID uint   `json:"trackID"`
+	TrackID int    `json:"trackID"`
 	Result  Result `json:"result"`
 	Reason  string `json:"reason"`
 }

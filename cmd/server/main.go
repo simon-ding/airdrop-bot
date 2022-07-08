@@ -15,15 +15,16 @@ func main() {
 		log.Panicf("read config: %v", err)
 	}
 	log.Info("read config success")
+
+	db.Open(cfg1.Server.DbFile)
+	log.Infof("db open success")
+
 	awsDir := path.Join(cfg1.Server.Dir, "aws.config")
 	err = aws.WriteAwsConfig(cfg1.Server.AWS.AccessKeyID, cfg1.Server.AWS.SecretAccessKey, awsDir)
 	if err != nil {
 		log.Errorf("write aws config error: %v", err)
 		return
 	}
-
-	db.Open(cfg1.Server.Dir)
-	log.Infof("db open success")
 
 	server, err := NewServer(&cfg1.Server)
 	if err != nil {
