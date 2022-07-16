@@ -91,7 +91,7 @@ func (s *Server) heartBeat(c *gin.Context) {
 			Timeout: time.Minute * 15,
 		}
 		log.Infof("bridge task of account %v has activated", a.ID)
-		db.Client.StepRun.Update().Where(steprun.ID(step.ID)).SetStatus(steprun.StatusRunning).Save(context.TODO())
+		db.Client.StepRun.Update().Where(steprun.ID(step.ID)).SetStatus(steprun.StatusRunning).SaveX(context.TODO())
 	}
 	c.JSON(http.StatusOK, rsp)
 }
@@ -110,7 +110,7 @@ func (s *Server) taskStatusUpdate(c *gin.Context) {
 	case cfg.ResultSuccess:
 		ss = steprun.StatusSuccess
 	}
-	db.Client.StepRun.Update().Where(steprun.ID(ts.TrackID)).SetStatus(ss).SetReason(ts.Reason).Exec(context.Background())
+	db.Client.StepRun.Update().Where(steprun.ID(ts.TrackID)).SetStatus(ss).SetReason(ts.Reason).ExecX(context.Background())
 
 	log.Infof("success update task status: %+v", ts)
 
@@ -188,10 +188,8 @@ func (s *Server) transferEth(a *ent.Account) error {
 	if err != nil {
 		return err
 	}
-	db.Client.StepRun.Create().
+	return db.Client.StepRun.Create().
 		SetAccount(a).SetStep(db.StepArbitrumTransfer).SetStatus(steprun.StatusSuccess).Exec(context.Background())
-
-	return nil
 }
 
 func (s *Server) pickNodeToRun() (*ent.Node, error) {
