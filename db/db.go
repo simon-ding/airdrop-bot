@@ -26,7 +26,7 @@ func Open(dir string) {
 	if err != nil {
 		log.Panicf("failed opening connection to sqlite: %v", err)
 	}
-	defer client.Close()
+
 	// Run the auto migration tool.
 	if err := client.Schema.Create(context.Background()); err != nil {
 		log.Panicf("failed creating schema resources: %v", err)
@@ -92,7 +92,7 @@ func AccountNum() int {
 }
 
 func SaveAccount(mnemonic string, address string, privateKey string) {
-	Client.Account.Create().SetAddress(address).SetMnemonic(mnemonic).SetPrivateKey(privateKey).Save(context.Background())
+	Client.Account.Create().SetAddress(address).SetMnemonic(mnemonic).SetPrivateKey(privateKey).SaveX(context.Background())
 }
 
 func PickANodeRandom() *ent.Node {
