@@ -67,6 +67,11 @@ type Binance struct {
 	SecretKey string `mapstructure:"secretKey"`
 }
 
+type ChainUrl struct {
+	Arbitrum string `mapstructure:"arbitrum"`
+	Ethereum string `mapstructure:"ethereum"`
+}
+
 func LoadConfig() (*Config, error) {
 	viper.SetConfigName("config") // name of config file (without extension)
 	viper.SetConfigType("yaml")   // REQUIRED if the config file does not have the extension in the name

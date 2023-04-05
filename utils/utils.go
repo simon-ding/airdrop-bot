@@ -2,7 +2,7 @@ package utils
 
 import (
 	"airdrop-bot/log"
-	"airdrop-bot/metamask"
+	"airdrop-bot/pkg/metamask"
 	"archive/zip"
 	"bytes"
 	"context"
