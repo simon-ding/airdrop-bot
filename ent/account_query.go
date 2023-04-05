@@ -300,7 +300,6 @@ func (aq *AccountQuery) WithStepRuns(opts ...func(*StepRunQuery)) *AccountQuery 
 //		GroupBy(account.FieldMnemonic).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (aq *AccountQuery) GroupBy(field string, fields ...string) *AccountGroupBy {
 	group := &AccountGroupBy{config: aq.config}
 	group.fields = append([]string{field}, fields...)
@@ -325,7 +324,6 @@ func (aq *AccountQuery) GroupBy(field string, fields ...string) *AccountGroupBy 
 //	client.Account.Query().
 //		Select(account.FieldMnemonic).
 //		Scan(ctx, &v)
-//
 func (aq *AccountQuery) Select(fields ...string) *AccountSelect {
 	aq.fields = append(aq.fields, fields...)
 	return &AccountSelect{AccountQuery: aq}

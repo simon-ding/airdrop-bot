@@ -7,18 +7,21 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/chromedp/chromedp"
-	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
-	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/text/encoding/simplifiedchinese"
-	"golang.org/x/text/transform"
 	"io"
 	"io/ioutil"
+	"math"
+	"math/big"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/chromedp/chromedp"
+	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
+	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 )
 
 func GbkToUtf8(s []byte) []byte {
@@ -164,4 +167,12 @@ func Unzip(src []byte, dest string) error {
 	}
 	log.Infof("unzip file success")
 	return nil
+}
+
+//
+func Wei2Eth(wei *big.Int) *big.Float {
+	fbalance := new(big.Float)
+	fbalance.SetString(wei.String())
+	ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
+	return ethValue
 }

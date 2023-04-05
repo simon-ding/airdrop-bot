@@ -17,15 +17,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	AccountsPerIp    int        `mapstructure:"accountsPerIp"`
 	AccountsToGen    int        `mapstructure:"accountsToGen"`
-	Owlracle         Owlracle   `mapstructure:"owlracle"`
 	GasFeeAcceptable int        `mapstructure:"gasFeeAcceptable"`
-	Cloudflare       Cloudflare `mapstructure:"cloudflare"`
-	AWS              AWS        `mapstructure:"aws"`
-	Binance          Binance    `mapstructure:"binance"`
 	Token            string     `mapstructure:"token"`
-	Dir              string     `mapstructure:"dir"`
 	DbFile           string     `mapstructure:"dbFile"`
 }
 

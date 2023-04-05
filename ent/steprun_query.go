@@ -336,7 +336,6 @@ func (srq *StepRunQuery) WithNode(opts ...func(*NodeQuery)) *StepRunQuery {
 //		GroupBy(steprun.FieldStep).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (srq *StepRunQuery) GroupBy(field string, fields ...string) *StepRunGroupBy {
 	group := &StepRunGroupBy{config: srq.config}
 	group.fields = append([]string{field}, fields...)
@@ -361,7 +360,6 @@ func (srq *StepRunQuery) GroupBy(field string, fields ...string) *StepRunGroupBy
 //	client.StepRun.Query().
 //		Select(steprun.FieldStep).
 //		Scan(ctx, &v)
-//
 func (srq *StepRunQuery) Select(fields ...string) *StepRunSelect {
 	srq.fields = append(srq.fields, fields...)
 	return &StepRunSelect{StepRunQuery: srq}

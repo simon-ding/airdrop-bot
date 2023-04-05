@@ -300,7 +300,6 @@ func (nq *NodeQuery) WithStepRuns(opts ...func(*StepRunQuery)) *NodeQuery {
 //		GroupBy(node.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (nq *NodeQuery) GroupBy(field string, fields ...string) *NodeGroupBy {
 	group := &NodeGroupBy{config: nq.config}
 	group.fields = append([]string{field}, fields...)
@@ -325,7 +324,6 @@ func (nq *NodeQuery) GroupBy(field string, fields ...string) *NodeGroupBy {
 //	client.Node.Query().
 //		Select(node.FieldName).
 //		Scan(ctx, &v)
-//
 func (nq *NodeQuery) Select(fields ...string) *NodeSelect {
 	nq.fields = append(nq.fields, fields...)
 	return &NodeSelect{NodeQuery: nq}
