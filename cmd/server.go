@@ -85,19 +85,19 @@ func (s *Server) getBalance(c *gin.Context) {
 		log.Errorf("get balance: %v", err)
 	}
 
-	m := map[string]map[string]string {
-		"ethereum": {
+	c.JSON(200, gin.H{
+		"ethereum": map[string]string{
 			"ETH": etheth.String(),
 			"ARB": ethArb.String(),
 			"USDT": ethUSDT.String(),
 		},
-		"arbitrum": {
+		"arbitrum": map[string]string{
 			"ETH": arbEth.String(),
 			"ARB": arbArb.String(),
 			"USDT": arbUSDT.String(),
 		},
-	}
-	c.JSON(200, m)
+		"address": ac.Address,
+	})
 }
 
 func (s *Server) FirstRunGenAccount() {
