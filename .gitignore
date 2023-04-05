@@ -20,3 +20,4 @@ ext/
 *.db
 aws.config
 config*.yaml
+airdrop-bot

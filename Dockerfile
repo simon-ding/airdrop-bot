@@ -14,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # 指定OS等，并go build
-RUN GOOS=linux GOARCH=amd64 go build ./cmd/ -o airdrop-bot
+RUN GOOS=linux GOARCH=amd64 go build -o airdrop-bot ./cmd/ 
 
 FROM ubuntu:22.04
 
