@@ -55,14 +55,35 @@ func (s *Server) getBalance(c *gin.Context) {
 	arbClient.Connect()
 	ethCLient.Connect()
 
-	etheth, _ := ethCLient.GetEthBalance(ac.Address)
-	ethUSDT, _ := ethCLient.GetBalance(ethclient.TokenUSDT, ac.Address)
-	ethArb, _ := ethCLient.GetBalance(ethclient.TokenArb, ac.Address)
+	etheth, err := ethCLient.GetEthBalance(ac.Address)
+	if err != nil {
+		log.Errorf("get balance: %v", err)
+	}
+	ethUSDT, err := ethCLient.GetBalance(ethclient.TokenUSDT, ac.Address)
+	if err != nil {
+		log.Errorf("get balance: %v", err)
+	}
 
-	arbEth, _ := arbClient.GetEthBalance(ac.Address)
-	arbUSDT, _ := arbClient.GetBalance(ethclient.TokenUSDT, ac.Address)
-	arbArb, _ := arbClient.GetBalance(ethclient.TokenArb, ac.Address)
-	
+	ethArb, err := ethCLient.GetBalance(ethclient.TokenArb, ac.Address)
+	if err != nil {
+		log.Errorf("get balance: %v", err)
+	}
+
+	arbEth, err := arbClient.GetEthBalance(ac.Address)
+	if err != nil {
+		log.Errorf("get balance: %v", err)
+	}
+
+	arbUSDT, err := arbClient.GetBalance(ethclient.TokenUSDT, ac.Address)
+	if err != nil {
+		log.Errorf("get balance: %v", err)
+	}
+
+	arbArb, err := arbClient.GetBalance(ethclient.TokenArb, ac.Address)
+	if err != nil {
+		log.Errorf("get balance: %v", err)
+	}
+
 	m := map[string]map[string]string {
 		"ethereum": {
 			"ETH": etheth.String(),
