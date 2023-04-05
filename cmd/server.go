@@ -49,6 +49,7 @@ func (s *Server) getBalance(c *gin.Context) {
 		return
 	}
 	ac := db.FindAccount(idd)
+	log.Infof("query account: %v", ac.Address)
 
 	arbClient := ethclient.NewArbOneClient()
 	ethCLient := ethclient.NewEthClient()
