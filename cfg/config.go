@@ -70,6 +70,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetConfigName("config") // name of config file (without extension)
 	viper.SetConfigType("yaml")   // REQUIRED if the config file does not have the extension in the name
 	viper.AddConfigPath(".")
+	viper.AddConfigPath("/app/data")
 
 	var cc Config
 	// optionally look for config in the working directory
