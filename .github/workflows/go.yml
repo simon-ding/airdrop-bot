@@ -12,6 +12,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Login to image repository
+        if: github.ref_type == 'tag'
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: simon-ding/airdrop-bot:latest
 
     # - name: Set up Go
     #   uses: actions/setup-go@v3
@@ -20,11 +33,3 @@ jobs:
 
     # - name: Build
     #   run: go build -v ./...
-      -
-        name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          tags: simon-ding/airdrop-bot:latest
-          secrets: |
-            GIT_AUTH_TOKEN=${{ secrets.MYTOKEN }}
