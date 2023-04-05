@@ -47,7 +47,6 @@ func (c *Client) GetEthBalance(addr string) (*big.Float, error) {
 func (c *Client) GetBalance(token Token, address string) (*big.Float, error) {
 	contractAddress := GetContractAddress(c.chain, token)
 	tokenAddress := common.HexToAddress(contractAddress)
-	d := GetTokenDecimal(token)
 
 	abiClient, err := abi.NewErc20(tokenAddress, c.client)
 	if err != nil {
@@ -58,10 +57,14 @@ func (c *Client) GetBalance(token Token, address string) (*big.Float, error) {
 	if err != nil {
 		return nil, fmt.Errorf("call abi: %v", err)
 	}
+	d, err := abiClient.Decimals(&bind.CallOpts{})
+	if err != nil {
+		return nil, fmt.Errorf("get decimals: %v", err)
+	}
 
 	fbalance := new(big.Float)
 	fbalance.SetString(bal.String())
-	v := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(d)))
+	v := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(int(d))))
 	return v, nil
 }
 
