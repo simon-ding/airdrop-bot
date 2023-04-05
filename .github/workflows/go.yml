@@ -23,7 +23,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: ghcr.io/simon-ding/airdrop-bot:latest
+          tags: simon-ding/airdrop-bot:latest
 
     # - name: Set up Go
     #   uses: actions/setup-go@v3
