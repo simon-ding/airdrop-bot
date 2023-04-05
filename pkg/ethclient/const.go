@@ -44,6 +44,11 @@ var contractAddress = map[Chain]map[Token]string {
 	},
 }
 
+var decimals = map[Token]int {
+	TokenUSDT: 6,
+	TokenArb: 18,
+}
+
 func GetContractAddress(chain Chain, token Token) string {
 	return contractAddress[chain][token]
 }
@@ -51,4 +56,8 @@ func GetContractAddress(chain Chain, token Token) string {
 
 func GetChainRpcEndpoint(chain Chain) string {
 	return chainUrl[chain]
+}
+
+func GetTokenDecimal(token Token) int {
+	return decimals[token]
 }

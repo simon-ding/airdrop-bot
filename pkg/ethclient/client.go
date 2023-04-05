@@ -6,15 +6,13 @@ import (
 	"airdrop-bot/utils"
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
-
-
-
 
 func NewClient(chain Chain) *Client {
 	return &Client{chain: chain}
@@ -46,9 +44,10 @@ func (c *Client) GetEthBalance(addr string) (*big.Float, error) {
 	return utils.Wei2Eth(balance), nil
 }
 
-func (c *Client) GetBalance(token Token, address string) (*big.Int, error) {
+func (c *Client) GetBalance(token Token, address string) (*big.Float, error) {
 	contractAddress := GetContractAddress(c.chain, token)
 	tokenAddress := common.HexToAddress(contractAddress)
+	d := GetTokenDecimal(token)
 
 	abiClient, err := abi.NewErc20(tokenAddress, c.client)
 	if err != nil {
@@ -59,7 +58,11 @@ func (c *Client) GetBalance(token Token, address string) (*big.Int, error) {
 	if err != nil {
 		return nil, fmt.Errorf("call abi: %v", err)
 	}
-	return bal, nil
+
+	fbalance := new(big.Float)
+	fbalance.SetString(bal.String())
+	v := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(d)))
+	return v, nil
 }
 
 func (c *Client) GasPrice() *big.Float {
@@ -69,4 +72,3 @@ func (c *Client) GasPrice() *big.Float {
 	}
 	return utils.Wei2Eth(gas)
 }
-

@@ -176,3 +176,17 @@ func Wei2Eth(wei *big.Int) *big.Float {
 	ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
 	return ethValue
 }
+
+func ToArb(b *big.Int) *big.Float {
+	fbalance := new(big.Float)
+	fbalance.SetString(b.String())
+	v := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
+	return v
+}
+
+func ToUSDT(b *big.Int) *big.Float {
+	fbalance := new(big.Float)
+	fbalance.SetString(b.String())
+	v := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(6)))
+	return v
+}
