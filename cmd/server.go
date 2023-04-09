@@ -60,6 +60,8 @@ func (s *Server) getBalance(c *gin.Context) {
 	zkera := ethclient.NewZkClient()
 	arbClient.Connect()
 	ethCLient.Connect()
+	nova.Connect()
+	zkera.Connect()
 
 	etheth, err := ethCLient.GetEthBalance(ac.Address)
 	if err != nil {
