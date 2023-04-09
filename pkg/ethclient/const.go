@@ -1,5 +1,7 @@
 package ethclient
 
+import "fmt"
+
 type Token int 
 type Chain int
 
@@ -40,6 +42,16 @@ func (c Chain) String() string {
 		return "ZkEra"
 	}
 	return ""
+}
+
+func GetChain(name string) Chain {
+
+	for  i := Chain(0);i < 100;i++ {
+		if i.String() == name {
+			return i
+		}
+	}
+	panic(fmt.Sprintf("no chain named: %v", name))
 }
 
 var chainUrl = map[Chain]string {

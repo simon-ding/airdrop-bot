@@ -6,6 +6,7 @@ import (
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/ethclient"
 	"airdrop-bot/utils"
+	"math/big"
 	"net/http"
 	"strconv"
 
@@ -23,7 +24,7 @@ func NewServer(cfg *cfg.ServerConfig) (*Server, error) {
 type Server struct {
 	cfg *cfg.ServerConfig
 
-	r    *gin.Engine
+	r *gin.Engine
 }
 
 func (s *Server) Serve() error {
@@ -40,6 +41,7 @@ func (s *Server) Serve() error {
 	api := s.r.Group("/api/v1")
 
 	api.GET("/balance/:id", s.getBalance)
+	api.POST("/bridge/orbiter", s.orbiterBridge)
 	return s.r.Run(":8080")
 }
 
@@ -54,6 +56,8 @@ func (s *Server) getBalance(c *gin.Context) {
 
 	arbClient := ethclient.NewArbOneClient()
 	ethCLient := ethclient.NewEthClient()
+	nova := ethclient.NewArbNovaClient()
+	zkera := ethclient.NewZkClient()
 	arbClient.Connect()
 	ethCLient.Connect()
 
@@ -86,19 +90,65 @@ func (s *Server) getBalance(c *gin.Context) {
 		log.Errorf("get balance: %v", err)
 	}
 
+	novaEth, err := nova.GetEthBalance(ac.Address)
+	if err != nil {
+		log.Errorf("get balance: %v", err)
+	}
+	zkEth, err := zkera.GetEthBalance(ac.Address)
+	if err != nil {
+		log.Errorf("get balance: %v", err)
+	}
+
 	c.JSON(200, gin.H{
 		"ethereum": map[string]string{
-			"ETH": etheth.String(),
-			"ARB": ethArb.String(),
+			"ETH":  etheth.String(),
+			"ARB":  ethArb.String(),
 			"USDT": ethUSDT.String(),
 		},
-		"arbitrum": map[string]string{
-			"ETH": arbEth.String(),
-			"ARB": arbArb.String(),
+		"arbitrumOne": map[string]string{
+			"ETH":  arbEth.String(),
+			"ARB":  arbArb.String(),
 			"USDT": arbUSDT.String(),
+		},
+		"abitrumNova": map[string]string{
+			"ETH": novaEth.String(),
+		},
+		"zksync": map[string]string{
+			"ETH": zkEth.String(),
 		},
 		"address": ac.Address,
 	})
+}
+
+type orbiterInput struct {
+	ToChain   string
+	FromChain string
+	Account   int
+	Amount    float64
+}
+
+func (s *Server) orbiterBridge(c *gin.Context) {
+	var in orbiterInput
+	c.ShouldBindJSON(&in)
+	if err := s.doOrbiterBridge(in); err != nil {
+		log.Errorf("orbiter bridge error: %v", err)
+		c.JSON(501, "error")
+	} else {
+		c.JSON(200, "success")
+	}
+
+}
+
+func (s *Server) doOrbiterBridge(in orbiterInput) error {
+	toChain := ethclient.GetChain(in.ToChain)
+	fromChain := ethclient.GetChain(in.FromChain)
+	ac := db.FindAccount(in.Account)
+	log.Infof("query account: %v", ac.Address)
+
+	hander := ethclient.GetHandler(fromChain)
+
+	err := hander.BridgeUseOrbiter(ac.PrivateKey, big.NewFloat(in.Amount), toChain)
+	return err
 }
 
 func (s *Server) FirstRunGenAccount() {
