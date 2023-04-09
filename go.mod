@@ -15,6 +15,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/viper v1.15.0
 	github.com/tyler-smith/go-bip39 v1.1.0
+	github.com/zksync-sdk/zksync2-go v0.1.0
 	go.uber.org/zap v1.21.0
 	golang.org/x/text v0.8.0
 )

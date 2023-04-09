@@ -37,8 +37,9 @@ func (s *Server) Serve() error {
 		}
 		c.Next()
 	})
+	api := s.r.Group("/api/v1")
 
-	s.r.GET("/balance/:id", s.getBalance)
+	api.GET("/balance/:id", s.getBalance)
 	return s.r.Run(":8080")
 }
 
