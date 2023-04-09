@@ -149,6 +149,11 @@ func (c *Client) Tranfer(from, to string, value *big.Float) error {
 
 func(c *Client) BridgeUseOrbiter(privateKey string, value *big.Float, toChain Chain) error {
 
+	// min 0.005eth
+	if value.Cmp(big.NewFloat(0.006)) <= 0 {
+		return fmt.Errorf("less then min transfer amount")
+	}
+
 	log.Infof("orbiter bridge from %v to %v, amount: %v", c.chain, toChain, value)
 
 	code := GetOribiterNewworkCode(toChain)
