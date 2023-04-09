@@ -10,7 +10,7 @@ type ChainHandelr interface {
 	BridgeUseOrbiter(privateKey string, value *big.Float, toChain Chain) error
 }
 
-var handlers map[Chain]ChainHandelr
+var handlers = map[Chain]ChainHandelr{}
 
 func GetHandler(c Chain) ChainHandelr {
 	return handlers[c]
