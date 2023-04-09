@@ -28,6 +28,20 @@ func (t Token) String() string {
 	return ""
 }
 
+func (c Chain) String() string {
+	switch c {
+	case ChainEthMain:
+		return "Ethereum"
+	case ChainArbOne:
+		return "ArbOne"
+	case ChainArbNova:
+		return "ArbNova"
+	case ChainZkEra:
+		return "ZkEra"
+	}
+	return ""
+}
+
 var chainUrl = map[Chain]string {
 	ChainEthMain: "https://eth.llamarpc.com",
 	ChainArbNova:"https://nova.arbitrum.io/rpc",
@@ -55,4 +69,16 @@ func GetContractAddress(chain Chain, token Token) string {
 
 func GetChainRpcEndpoint(chain Chain) string {
 	return chainUrl[chain]
+}
+
+//https://docs.orbiter.finance/technology
+var orbiterNetworkCode = map[Chain]int {
+	ChainEthMain: 9001,
+	ChainArbOne: 9002,
+	ChainArbNova: 9016,
+	ChainZkEra: 9014,
+}
+
+func GetOribiterNewworkCode(toChain Chain) int {
+	return orbiterNetworkCode[toChain]
 }

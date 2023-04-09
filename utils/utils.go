@@ -6,10 +6,10 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"math/big"
 	"math/rand"
 	"os"
@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/text/encoding/simplifiedchinese"
@@ -169,10 +171,38 @@ func Unzip(src []byte, dest string) error {
 	return nil
 }
 
-//
 func Wei2Eth(wei *big.Int) *big.Float {
 	fbalance := new(big.Float)
 	fbalance.SetString(wei.String())
-	ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
+	ethValue := new(big.Float).Quo(fbalance, big.NewFloat(params.Ether))
 	return ethValue
+}
+
+func Eth2Wei(eth *big.Float) *big.Int {
+	coin := new(big.Float)
+	coin.SetInt(big.NewInt(params.Ether))
+
+	eth.Mul(eth, coin)
+
+	wei := new(big.Int)
+	eth.Int(wei) // store converted number in result
+
+	return wei
+}
+
+func GetPublicKey(privateKey string) string {
+	pKey, err := crypto.HexToECDSA(privateKey)
+	if err != nil {
+		log.Errorf("encode private key: %v", err)
+		return ""
+	}
+	publicKey := pKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Errorf("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
+		return ""
+	}
+	address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
+
+	return address
 }

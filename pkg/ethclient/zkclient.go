@@ -7,11 +7,12 @@ import (
 )
 
 func NewZkClient() *ZkClient {
-	return &ZkClient{Client: NewClient(ChainArbOne)}
+	return &ZkClient{Client: NewClient(ChainZkEra)}
 }
 
 type ZkClient struct {
 	*Client
+	provider zksync2.Provider
 }
 
 func (c *ZkClient) Connect() error {
@@ -21,5 +22,6 @@ func (c *ZkClient) Connect() error {
 		return fmt.Errorf("coonect to zksync network: %v", err)
 	}
 	c.Client.client = zp.GetClient()
+	c.provider = zp
 	return nil
 }

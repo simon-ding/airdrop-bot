@@ -16,3 +16,12 @@ func (a *ArbOneClient) TokenSum() {
 	// }
 	// instance.ParseCanClaim(nil)
 }
+
+
+func NewArbNovaClient() *ArbNovaClient {
+	return &ArbNovaClient{Client: NewClient(ChainArbNova)}
+}
+
+type ArbNovaClient struct {
+	*Client
+}
