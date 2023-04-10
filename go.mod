@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	entgo.io/ent v0.10.1
-	github.com/adshao/go-binance/v2 v2.3.6
+	github.com/adshao/go-binance/v2 v2.4.1
 	github.com/aws/aws-sdk-go-v2/config v1.15.9
 	github.com/aws/aws-sdk-go-v2/service/lightsail v1.22.0
 	github.com/chromedp/cdproto v0.0.0-20220515234810-83d799542a04
