@@ -5,7 +5,7 @@ go 1.18
 require (
 	entgo.io/ent v0.10.1
 	github.com/adshao/go-binance/v2 v2.4.1
-	github.com/aws/aws-sdk-go-v2/config v1.15.9
+	github.com/aws/aws-sdk-go-v2/config v1.18.20
 	github.com/aws/aws-sdk-go-v2/service/lightsail v1.22.0
 	github.com/chromedp/cdproto v0.0.0-20220515234810-83d799542a04
 	github.com/chromedp/chromedp v0.8.1
@@ -30,16 +30,17 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.16.4 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.12.4 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.5 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.11 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.5 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.11.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.16.6 // indirect
-	github.com/aws/smithy-go v1.11.2 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.17.8 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.13.19 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.2 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.32 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.26 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.33 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.26 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.12.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.18.8 // indirect
+	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
