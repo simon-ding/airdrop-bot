@@ -7,8 +7,8 @@ require (
 	github.com/adshao/go-binance/v2 v2.4.1
 	github.com/aws/aws-sdk-go-v2/config v1.18.20
 	github.com/aws/aws-sdk-go-v2/service/lightsail v1.22.0
-	github.com/chromedp/cdproto v0.0.0-20220515234810-83d799542a04
-	github.com/chromedp/chromedp v0.8.1
+	github.com/chromedp/cdproto v0.0.0-20230220211738-2b1ec77315c9
+	github.com/chromedp/chromedp v0.9.1
 	github.com/ethereum/go-ethereum v1.11.5
 	github.com/gin-gonic/gin v1.9.0
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
