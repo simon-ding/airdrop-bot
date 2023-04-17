@@ -138,10 +138,10 @@ func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
 }
 
 type orbiterInput struct {
-	ToChain   string
-	FromChain string
-	Account   int
-	Amount    float64
+	ToChain   string `json:"to_chain"`
+	FromChain string `json:"from_chain"`
+	Account   int `json:"account"`
+	Amount    float64 `json:"amount"`
 }
 
 func (s *Server) orbiterBridge(c *gin.Context) (interface{}, error) {
