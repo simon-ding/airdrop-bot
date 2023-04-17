@@ -49,13 +49,11 @@ func (s *Server) Serve() error {
 
 func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
 	accounts := db.FetchAllAccounts()
-	var l []string
+	var m map[int]string
 	for _, a := range accounts {
-		l = append(l, a.Address)
+		m[a.ID] = a.Address
 	}
-	return gin.H{
-		"accounts": l,
-	}, nil
+	return m, nil
 }
 
 func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
