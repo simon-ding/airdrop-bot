@@ -160,6 +160,10 @@ func (s *Server) doOrbiterBridge(in orbiterInput) error {
 	log.Infof("query account: %v", ac.Address)
 
 	hander := ethclient.GetHandler(fromChain)
+	if err := hander.Connect(); err != nil {
+		return err
+	}
+
 
 	err := hander.BridgeUseOrbiter(ac.PrivateKey, big.NewFloat(in.Amount), toChain)
 	return err
