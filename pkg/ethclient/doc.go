@@ -1,6 +1,9 @@
 package ethclient
 
-import "math/big"
+import (
+	"airdrop-bot/log"
+	"math/big"
+)
 
 type ChainHandelr interface {
 	Connect() error
@@ -17,6 +20,7 @@ func GetHandler(c Chain) ChainHandelr {
 }
 
 func regHandler(c Chain, handler ChainHandelr) {
+	log.Infof("reg chain %v handler: %v", c, handler)
 	handlers[c] = handler
 }
 
