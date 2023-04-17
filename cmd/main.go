@@ -4,6 +4,8 @@ import (
 	"airdrop-bot/cfg"
 	"airdrop-bot/db"
 	"airdrop-bot/log"
+
+	"airdrop-bot/pkg/server"
 )
 
 func main() {
@@ -17,7 +19,7 @@ func main() {
 	db.Open(cfg1.Server.DbFile)
 	log.Infof("db open success")
 
-	server, err := NewServer(&cfg1.Server)
+	server, err := server.NewServer(&cfg1.Server)
 	if err != nil {
 		log.Errorf("server error: %v", err)
 		return

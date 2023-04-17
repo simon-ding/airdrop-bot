@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"airdrop-bot/cfg"
@@ -42,7 +42,19 @@ func (s *Server) Serve() error {
 
 	api.GET("/balance/:id", s.getBalance)
 	api.POST("/bridge/orbiter", s.orbiterBridge)
+	api.GET("/address/all", s.getAllAccounts)
 	return s.r.Run(":8080")
+}
+
+func (s *Server) getAllAccounts(c *gin.Context) {
+	accounts := db.FetchAllAccounts()
+	var l []string
+	for _, a := range accounts {
+		l = append(l, a.Address)
+	}
+	c.JSON(200, gin.H{
+		"accounts": l,
+	})
 }
 
 func (s *Server) getBalance(c *gin.Context) {
