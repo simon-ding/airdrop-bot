@@ -32,7 +32,7 @@ func Open(dir string) {
 	}
 
 	// Run the auto migration tool.
-	if err := client.Schema.Create(context.Background()); err != nil {
+	if err := c.Schema.Create(context.Background()); err != nil {
 		log.Panicf("failed creating schema resources: %v", err)
 	}
 	client = c
