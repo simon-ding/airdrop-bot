@@ -3,7 +3,7 @@ module airdrop-bot
 go 1.18
 
 require (
-	entgo.io/ent v0.12.0
+	entgo.io/ent v0.12.1
 	github.com/adshao/go-binance/v2 v2.4.1
 	github.com/aws/aws-sdk-go-v2/config v1.18.21
 	github.com/aws/aws-sdk-go-v2/service/lightsail v1.26.3
