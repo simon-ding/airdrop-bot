@@ -44,6 +44,7 @@ func (s *Server) Serve() error {
 	api.GET("/balance/:id", HttpHandler(s.getBalance))
 	api.POST("/bridge/orbiter", HttpHandler(s.orbiterBridge))
 	api.GET("/address/all", HttpHandler(s.getAllAccounts))
+	api.POST("/address/gen/:num", HttpHandler(s.GenAccounts))
 	return s.r.Run(":8080")
 }
 
@@ -161,8 +162,17 @@ func (s *Server) doOrbiterBridge(in orbiterInput) error {
 	return err
 }
 
-func (s *Server) FirstRunGenAccount() {
-	num := s.cfg.AccountsToGen
+func (s *Server) GenAccounts(c *gin.Context) (interface{}, error){
+	n := c.Param("num")
+	num, err := strconv.Atoi(n)
+	if err != nil {
+		return nil, err
+	}
+	s.genAccounts(num)
+	return nil, nil
+}
+
+func (s *Server) genAccounts(num int) {
 	accountNum := db.AccountNum()
 	if accountNum == num {
 		log.Infof("accounts have already been generated,skip")
