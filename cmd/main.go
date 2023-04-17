@@ -5,7 +5,7 @@ import (
 	"airdrop-bot/db"
 	"airdrop-bot/log"
 
-	"airdrop-bot/pkg/server"
+	"airdrop-bot/server"
 )
 
 func main() {

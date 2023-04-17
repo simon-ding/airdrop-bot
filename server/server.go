@@ -6,6 +6,7 @@ import (
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/ethclient"
 	"airdrop-bot/utils"
+	"fmt"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -40,28 +41,28 @@ func (s *Server) Serve() error {
 	})
 	api := s.r.Group("/api/v1")
 
-	api.GET("/balance/:id", s.getBalance)
-	api.POST("/bridge/orbiter", s.orbiterBridge)
-	api.GET("/address/all", s.getAllAccounts)
+	api.GET("/balance/:id", HttpHandler(s.getBalance))
+	api.POST("/bridge/orbiter", HttpHandler(s.orbiterBridge))
+	api.GET("/address/all", HttpHandler(s.getAllAccounts))
 	return s.r.Run(":8080")
 }
 
-func (s *Server) getAllAccounts(c *gin.Context) {
+func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
 	accounts := db.FetchAllAccounts()
 	var l []string
 	for _, a := range accounts {
 		l = append(l, a.Address)
 	}
-	c.JSON(200, gin.H{
+	return gin.H{
 		"accounts": l,
-	})
+	}, nil
 }
 
-func (s *Server) getBalance(c *gin.Context) {
+func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
 	id := c.Param("id")
 	idd, err := strconv.Atoi(id)
 	if err != nil {
-		return
+		return nil, err
 	}
 	ac := db.FindAccount(idd)
 	log.Infof("query account: %v", ac.Address)
@@ -77,43 +78,43 @@ func (s *Server) getBalance(c *gin.Context) {
 
 	etheth, err := ethCLient.GetEthBalance(ac.Address)
 	if err != nil {
-		log.Errorf("get balance: %v", err)
+		return nil, fmt.Errorf("get balance: %v", err)
 	}
 	ethUSDT, err := ethCLient.GetBalance(ethclient.TokenUSDT, ac.Address)
 	if err != nil {
-		log.Errorf("get balance: %v", err)
+		return nil, fmt.Errorf("get balance: %v", err)
 	}
 
 	ethArb, err := ethCLient.GetBalance(ethclient.TokenArb, ac.Address)
 	if err != nil {
-		log.Errorf("get balance: %v", err)
+		return nil, fmt.Errorf("get balance: %v", err)
 	}
 
 	arbEth, err := arbClient.GetEthBalance(ac.Address)
 	if err != nil {
-		log.Errorf("get balance: %v", err)
+		return nil, fmt.Errorf("get balance: %v", err)
 	}
 
 	arbUSDT, err := arbClient.GetBalance(ethclient.TokenUSDT, ac.Address)
 	if err != nil {
-		log.Errorf("get balance: %v", err)
+		return nil, fmt.Errorf("get balance: %v", err)
 	}
 
 	arbArb, err := arbClient.GetBalance(ethclient.TokenArb, ac.Address)
 	if err != nil {
-		log.Errorf("get balance: %v", err)
+		return nil, fmt.Errorf("get balance: %v", err)
 	}
 
 	novaEth, err := nova.GetEthBalance(ac.Address)
 	if err != nil {
-		log.Errorf("get balance: %v", err)
+		return nil, fmt.Errorf("get balance: %v", err)
 	}
 	zkEth, err := zkera.GetEthBalance(ac.Address)
 	if err != nil {
-		log.Errorf("get balance: %v", err)
+		return nil, fmt.Errorf("get balance: %v", err)
 	}
 
-	c.JSON(200, gin.H{
+	return gin.H{
 		"ethereum": map[string]string{
 			"ETH":  etheth.String(),
 			"ARB":  ethArb.String(),
@@ -131,7 +132,7 @@ func (s *Server) getBalance(c *gin.Context) {
 			"ETH": zkEth.String(),
 		},
 		"address": ac.Address,
-	})
+	}, nil
 }
 
 type orbiterInput struct {
@@ -141,16 +142,13 @@ type orbiterInput struct {
 	Amount    float64
 }
 
-func (s *Server) orbiterBridge(c *gin.Context) {
+func (s *Server) orbiterBridge(c *gin.Context) (interface{}, error) {
 	var in orbiterInput
 	c.ShouldBindJSON(&in)
 	if err := s.doOrbiterBridge(in); err != nil {
-		log.Errorf("orbiter bridge error: %v", err)
-		c.JSON(501, "error")
-	} else {
-		c.JSON(200, "success")
+		return nil, fmt.Errorf("orbiter bridge error: %v", err)
 	}
-
+	return nil, nil
 }
 
 func (s *Server) doOrbiterBridge(in orbiterInput) error {
