@@ -50,9 +50,12 @@ func (s *Server) Serve() error {
 
 func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
 	accounts := db.FetchAllAccounts()
-	var m = make(map[int]string, len(accounts))
+	var m = make([]gin.H, 0, len(accounts))
 	for _, a := range accounts {
-		m[a.ID] = a.Address
+		m = append(m, gin.H{
+			"id":      a.ID,
+			"address": a.Address,
+		})
 	}
 	return m, nil
 }
@@ -162,7 +165,7 @@ func (s *Server) doOrbiterBridge(in orbiterInput) error {
 	return err
 }
 
-func (s *Server) GenAccounts(c *gin.Context) (interface{}, error){
+func (s *Server) GenAccounts(c *gin.Context) (interface{}, error) {
 	n := c.Param("num")
 	num, err := strconv.Atoi(n)
 	if err != nil {
