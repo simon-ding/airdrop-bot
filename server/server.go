@@ -49,7 +49,7 @@ func (s *Server) Serve() error {
 
 func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
 	accounts := db.FetchAllAccounts()
-	var m map[int]string
+	var m = make(map[int]string, len(accounts))
 	for _, a := range accounts {
 		m[a.ID] = a.Address
 	}
