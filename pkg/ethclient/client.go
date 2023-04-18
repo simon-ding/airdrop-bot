@@ -168,3 +168,7 @@ func(c *Client) BridgeUseOrbiter(privateKey string, value *big.Float, toChain Ch
 	
 	return c.Tranfer(privateKey, orbiterAddress, utils.Wei2Eth(wei))
 }
+
+func (c *Client) Name() string {
+	return c.Chain.String()
+}

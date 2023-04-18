@@ -67,74 +67,47 @@ func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 	ac := db.FindAccount(idd)
-	log.Infof("query account: %v", ac.Address)
+	log.Infof("query account: %v	", ac.Address)
 
-	arbClient := ethclient.NewArbOneClient()
-	ethCLient := ethclient.NewEthClient()
-	nova := ethclient.NewArbNovaClient()
-	zkera := ethclient.NewZkClient()
-	arbClient.Connect()
-	ethCLient.Connect()
-	nova.Connect()
-	zkera.Connect()
-
-	etheth, err := ethCLient.GetEthBalance(ac.Address)
-	if err != nil {
-		return nil, fmt.Errorf("get balance: %v", err)
-	}
-	ethUSDT, err := ethCLient.GetBalance(ethclient.TokenUSDT, ac.Address)
-	if err != nil {
-		return nil, fmt.Errorf("get balance: %v", err)
+	chains := []ethclient.Chain{
+		ethclient.ChainEthMain,
+		ethclient.ChainArbOne,
+		ethclient.ChainArbNova,
+		ethclient.ChainZkEra,
 	}
 
-	ethArb, err := ethCLient.GetBalance(ethclient.TokenArb, ac.Address)
-	if err != nil {
-		return nil, fmt.Errorf("get balance: %v", err)
-	}
+	var resp = gin.H{}
+	resp["address"] = ac.Address
 
-	arbEth, err := arbClient.GetEthBalance(ac.Address)
-	if err != nil {
-		return nil, fmt.Errorf("get balance: %v", err)
+	for _, c := range chains {
+		var m = map[string]string{}
+		h := ethclient.GetHandler(c)
+		if err := h.Connect(); err != nil {
+			log.Errorf("connect to network: %v", err)
+			continue
+		}
+		name := h.Name()
+		
+		if eth, err := h.GetEthBalance(ac.Address);err != nil {
+			log.Errorf("get eth balance: %v", err)
+		} else {
+			m["eth"] = eth.String()
+		}
+		
+		if usdt, err := h.GetBalance(ethclient.TokenUSDT, ac.Address); err != nil {
+			log.Errorf("get usdt balance: %v", err)
+		} else {
+			m["usdt"] = usdt.String()
+		}
+		
+		if arb, err := h.GetBalance(ethclient.TokenArb, ac.Address); err != nil {
+			log.Errorf("get arb balance: %v", err)
+		} else {
+			m["arb"] = arb.String()
+		}
+		resp[name] = m
 	}
-
-	arbUSDT, err := arbClient.GetBalance(ethclient.TokenUSDT, ac.Address)
-	if err != nil {
-		return nil, fmt.Errorf("get balance: %v", err)
-	}
-
-	arbArb, err := arbClient.GetBalance(ethclient.TokenArb, ac.Address)
-	if err != nil {
-		return nil, fmt.Errorf("get balance: %v", err)
-	}
-
-	novaEth, err := nova.GetEthBalance(ac.Address)
-	if err != nil {
-		return nil, fmt.Errorf("get balance: %v", err)
-	}
-	zkEth, err := zkera.GetEthBalance(ac.Address)
-	if err != nil {
-		return nil, fmt.Errorf("get balance: %v", err)
-	}
-
-	return gin.H{
-		"ethereum": map[string]string{
-			"ETH":  etheth.String(),
-			"ARB":  ethArb.String(),
-			"USDT": ethUSDT.String(),
-		},
-		"arbitrumOne": map[string]string{
-			"ETH":  arbEth.String(),
-			"ARB":  arbArb.String(),
-			"USDT": arbUSDT.String(),
-		},
-		"abitrumNova": map[string]string{
-			"ETH": novaEth.String(),
-		},
-		"zksync": map[string]string{
-			"ETH": zkEth.String(),
-		},
-		"address": ac.Address,
-	}, nil
+	return resp, nil
 }
 
 type orbiterInput struct {
