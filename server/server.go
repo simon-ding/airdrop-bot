@@ -184,3 +184,8 @@ func (s *Server) isGasFeeAcceptable() bool {
 	}
 	return true
 }
+
+
+func (s *Server) claimAidoge() {
+	
+}

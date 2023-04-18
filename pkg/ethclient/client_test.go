@@ -6,7 +6,8 @@ import (
 )
 
 func TestArb(t *testing.T) {
-	a := NewArbNovaClient()
-	err := a.SyncSwap()
+	a := NewArbOneClient()
+	a.Connect()
+	err := a.ClaimAidoge("")
 	log.Infof("error : %v", err)
 }
