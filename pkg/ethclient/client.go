@@ -170,5 +170,5 @@ func(c *Client) BridgeUseOrbiter(privateKey string, value *big.Float, toChain Ch
 }
 
 func (c *Client) Name() string {
-	return c.Chain.String()
+	return c.chain.String()
 }
