@@ -89,6 +89,9 @@ func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
 		name := h.Name()
 		m := h.AllTokenBalances(ac.Address)
 	
+		if len(m) == 0 {
+			continue
+		}
 		resp[name] = m
 	}
 	return resp, nil
