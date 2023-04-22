@@ -290,7 +290,7 @@ func (c *Client) AllTokenBalances(address string) map[string]string {
 		res[t.String()] = bal.String()
 	}
 	ethBal, err := c.GetEthBalance(address)
-	if err == nil {
+	if err == nil && ethBal.String() != "0" {
 		res[TokenEth.String()] = ethBal.String()
 	}
 	return res
