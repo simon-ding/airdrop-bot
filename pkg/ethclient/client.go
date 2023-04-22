@@ -261,3 +261,33 @@ func (c *Client) ApproveTokenAllowance(t Token, ownerPrivateKey, spender string)
 	log.Infof("approve all token transaction: %v", tx.Hash().Hex())
 	return nil
 }
+
+
+func (c *Client) AllTokenBalances(address string) map[string]string {
+	tokens := []Token{
+		TokenArb,
+		TokenUSDT,
+		TokenEth,
+		TokenWETH,
+		TokenUSDC,
+		TokenDAI,
+	}
+
+	var res = make(map[string]string)
+	for _, t := range tokens {
+		addr := GetContractAddress(c.chain, t)
+		if addr == "" {
+			continue
+		}
+		bal, err := c.GetBalance(t, address)
+		if err != nil {
+			log.Errorf("get token %v address %v balance: %v", t, address, err)
+			continue
+		}
+		if bal.String() == "" {
+			continue
+		}
+		res[t.String()] = bal.String()
+	}
+	return res
+}

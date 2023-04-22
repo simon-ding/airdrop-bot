@@ -12,6 +12,7 @@ type ChainHandelr interface {
 	GetBalance(token Token, address string) (*big.Float, error)
 	Tranfer(from, to string, value *big.Float) error
 	BridgeUseOrbiter(privateKey string, value *big.Float, toChain Chain) error
+	AllTokenBalances(address string) map[string]string
 }
 
 var handlers = map[Chain]ChainHandelr{}

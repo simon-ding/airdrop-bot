@@ -80,31 +80,15 @@ func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
 	resp["address"] = ac.Address
 
 	for _, c := range chains {
-		var m = map[string]string{}
 		h := ethclient.GetHandler(c)
+
 		if err := h.Connect(); err != nil {
 			log.Errorf("connect to network: %v", err)
 			continue
 		}
 		name := h.Name()
-		
-		if eth, err := h.GetEthBalance(ac.Address);err != nil {
-			log.Errorf("get eth balance: %v", err)
-		} else {
-			m["eth"] = eth.String()
-		}
-		
-		if usdt, err := h.GetBalance(ethclient.TokenUSDT, ac.Address); err != nil {
-			log.Errorf("get usdt balance: %v", err)
-		} else {
-			m["usdt"] = usdt.String()
-		}
-		
-		if arb, err := h.GetBalance(ethclient.TokenArb, ac.Address); err != nil {
-			log.Errorf("get arb balance: %v", err)
-		} else {
-			m["arb"] = arb.String()
-		}
+		m := h.AllTokenBalances(ac.Address)
+	
 		resp[name] = m
 	}
 	return resp, nil
