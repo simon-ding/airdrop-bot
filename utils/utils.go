@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
@@ -208,7 +207,7 @@ func GetPublicKey(privateKey string) string {
 	return address
 }
 
-func SignMsg(msg string, priKey string) string {
+func SignMsg(msg []byte, priKey string) []byte {
 	privateKey, err := crypto.HexToECDSA(priKey)
 	if err != nil {
 		panic(err)
@@ -219,5 +218,5 @@ func SignMsg(msg string, priKey string) string {
 	if err != nil {
 		panic(err)
 	}
-	return hexutil.Encode(signature)
+	return signature
 }

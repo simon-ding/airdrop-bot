@@ -13,14 +13,13 @@ const (
 
 type Config struct {
 	Server ServerConfig `mapstructure:"server"`
-	Node   NodeConfig   `mapstructure:"node"`
 }
 
 type ServerConfig struct {
-	AccountsToGen    int        `mapstructure:"accountsToGen"`
-	GasFeeAcceptable int        `mapstructure:"gasFeeAcceptable"`
-	Token            string     `mapstructure:"token"`
-	DbFile           string     `mapstructure:"dbFile"`
+	GasFeeAcceptable int     `mapstructure:"gasFeeAcceptable"`
+	Token            string  `mapstructure:"token"`
+	DbFile           string  `mapstructure:"dbFile"`
+	Binance          Binance `mapstructure:"binance"`
 }
 
 type NodeConfig struct {

@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/pkg/errors"
 )
 
 func NewClient(chain Chain) *Client {
@@ -146,8 +147,7 @@ func (c *Client) Tranfer(from, to string, value *big.Float) error {
 	return nil
 }
 
-
-func(c *Client) BridgeUseOrbiter(privateKey string, value *big.Float, toChain Chain) error {
+func (c *Client) BridgeUseOrbiter(privateKey string, value *big.Float, toChain Chain) error {
 
 	// min 0.005eth
 	if value.Cmp(big.NewFloat(0.006)) <= 0 {
@@ -165,10 +165,99 @@ func(c *Client) BridgeUseOrbiter(privateKey string, value *big.Float, toChain Ch
 	wei.Add(wei, big.NewInt(int64(code)))
 
 	orbiterAddress := "0x80c67432656d59144ceff962e8faf8926599bcf8"
-	
+
 	return c.Tranfer(privateKey, orbiterAddress, utils.Wei2Eth(wei))
 }
 
 func (c *Client) Name() string {
 	return c.chain.String()
+}
+
+func (c *Client) ConvertToken(t Token, ammount float64) *big.Int {
+	addr := GetContractAddress(c.chain, t)
+	erc20, err := abi.NewErc20(common.HexToAddress(addr), c.client)
+	if err != nil {
+		log.Errorf("converting token: %v", err)
+		return nil
+	}
+	d, err := erc20.Decimals(&bind.CallOpts{})
+	if err != nil {
+		log.Errorf("get decimals: %v", err)
+		return nil
+	}
+	a := big.NewFloat(ammount)
+	b := new(big.Float)
+	b.SetInt(big.NewInt(int64(math.Pow10(int(d)))))
+	a.Mul(a, b)
+
+	r := new(big.Int)
+	a.Int(r)
+	return r
+}
+
+func (c *Client) GetTransactor(privateKey string) (*bind.TransactOpts, error) {
+	// publicKey := utils.GetPublicKeyFromPrivateKey(privateKey)
+	// nonce, err := c.client.PendingNonceAt(context.Background(), common.HexToAddress(publicKey))
+	// if err != nil {
+	// 	return nil, fmt.Errorf("get nonce: %v", err)
+	// }
+
+	gasPrice, err := c.client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	pkey, err := crypto.HexToECDSA(privateKey)
+	if err != nil {
+		return nil, err
+	}
+	chainId, err := c.client.ChainID(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	log.Infof("chain id: %v", chainId)
+	auth, err := bind.NewKeyedTransactorWithChainID(pkey, chainId)
+	if err != nil {
+		return nil, err
+	}
+	// auth.Nonce = big.NewInt(10)
+	auth.Value = big.NewInt(0)       // in wei
+	auth.GasLimit = uint64(10000000) // in units
+	auth.GasPrice = gasPrice
+	log.Infof("before transaction: %+v", auth)
+
+	return auth, nil
+}
+
+func (c *Client) ApproveTokenAllowance(t Token, ownerPrivateKey, spender string) error {
+	contractAddr := GetContractAddress(c.chain, t)
+	erc20, err := abi.NewErc20(common.HexToAddress(contractAddr), c.client)
+	if err != nil {
+		return nil
+	}
+	pubKey := common.HexToAddress(utils.GetPublicKey(ownerPrivateKey))
+	spenderAddr := common.HexToAddress(spender)
+	al, err := erc20.Allowance(&bind.CallOpts{}, pubKey, spenderAddr)
+	if err != nil {
+		return err
+	}
+	if al.Int64() != 0 {
+		log.Infof("already set allowance: %v", al)
+		return nil
+	}
+
+	auth, err := c.GetTransactor(ownerPrivateKey)
+	if err != nil {
+		return err
+	}
+	bal, err := erc20.BalanceOf(&bind.CallOpts{}, pubKey)
+	if err != nil {
+		return errors.Wrap(err, "erc20 balance")
+	}
+
+	tx, err := erc20.Approve(auth, spenderAddr, bal)
+	if err != nil {
+		return errors.Wrap(err, "erc20 approve")
+	}
+	log.Infof("approve all token transaction: %v", tx.Hash().Hex())
+	return nil
 }

@@ -3,10 +3,10 @@ package ethclient
 import (
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/abi"
-	"airdrop-bot/utils"
-	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -38,13 +38,13 @@ func (a *ArbOneClient) ClaimAidoge(privateKey string) error {
 		return fmt.Errorf("encode private key: %v", err)
 	}
 
-	//publicKey := priKey.Public()
-	// publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	// if !ok {
-	// 	return fmt.Errorf("error casting public key to ECDSA")
-	// }
+	publicKey := priKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return fmt.Errorf("error casting public key to ECDSA")
+	}
 
-	//publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
+	publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
 
 	doge, err := abi.NewAidoge(common.HexToAddress(contractAddr), a.client)
 	if err != nil {
@@ -53,36 +53,43 @@ func (a *ArbOneClient) ClaimAidoge(privateKey string) error {
 	am, err := doge.CanClaimAmount(&bind.CallOpts{})
 	log.Infof("results %v: %v", am, err)
 
-	// nonce, err := a.client.PendingNonceAt(context.Background(), common.BytesToAddress(publicKeyBytes))
+	// nonce1, err := a.client.PendingNonceAt(context.Background(), common.BytesToAddress(publicKeyBytes))
 	// if err != nil {
 	// 	return fmt.Errorf("get nonce: %v", err)
 	// }
 
-	gasPrice, err := a.client.SuggestGasPrice(context.Background())
+	// gasPrice, err := a.client.SuggestGasPrice(context.Background())
+	// if err != nil {
+	// 	return err
+	// }
+	auth := bind.NewKeyedTransactor(priKey)
+	//auth.Nonce = big.NewInt(int64(nonce1) + 4)
+	//auth.Value = big.NewInt(0)      // in wei
+	//auth.GasLimit = uint64(4000000) // in units
+	//auth.GasPrice = gasPrice
+	//auth.GasFeeCap = big.NewInt(104950000)
+	//ethmodAddr := "0xf6303ef5"
+	log.Infof("auth: %+v", auth)
+
+	nonce := big.NewInt(time.Now().UTC().UnixNano())
+	addr := "0x0000000000000000000000000000000000000000"
+
+	log.Infof("nonce: %v", nonce)
+	hash := crypto.Keccak256(
+		common.LeftPadBytes(common.HexToAddress(contractAddr).Bytes(), 32),
+		common.LeftPadBytes(publicKeyBytes, 32),
+		common.LeftPadBytes(nonce.Bytes(), 32),
+	)
+	s := common.Bytes2Hex(hash[:])
+	log.Infof("sig: %v, len: %d", s, len(hash))
+
+	sig, err := crypto.Sign(hash, priKey)
 	if err != nil {
 		return err
 	}
-	auth := bind.NewKeyedTransactor(priKey)
-	auth.Nonce = big.NewInt(3)
-	auth.Value = big.NewInt(0)     // in wei
-	auth.GasLimit = uint64(4000000) // in units
-	auth.GasPrice = gasPrice
-	//ethmodAddr := "0xf6303ef5"
+	log.Infof("sig: %v", common.Bytes2Hex(sig))
 
-	// aidoge, err := eabi.JSON(strings.NewReader(aidogeAbi))
-	// if err != nil {
-	// 	return err
-	// }
-	// ss, err := aidoge.Pack("claim", hexutil.Encode(publicKeyBytes), nil, nonce)
-	// if err != nil {
-	// 	return err
-	// }
-
-	msg := utils.SignMsg("string(ss)", privateKey)
-	log.Infof("signature: %v", msg)
-
-	addr := "0x0000000000000000000000000000000000000000"
-	tx, err := doge.Claim(auth, big.NewInt(1781832449777631750), []byte(msg), common.HexToAddress(addr))
+	tx, err := doge.Claim(auth, nonce, sig, common.HexToAddress(addr))
 	log.Infof("tx: %v, error: %v", tx, err)
 	return nil
 }
