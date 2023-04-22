@@ -284,10 +284,14 @@ func (c *Client) AllTokenBalances(address string) map[string]string {
 			log.Errorf("get token %v address %v balance: %v", t, address, err)
 			continue
 		}
-		if bal.String() == "" {
+		if bal.String() == "0" {
 			continue
 		}
 		res[t.String()] = bal.String()
+	}
+	ethBal, err := c.GetEthBalance(address)
+	if err == nil {
+		res[TokenEth.String()] = ethBal.String()
 	}
 	return res
 }
