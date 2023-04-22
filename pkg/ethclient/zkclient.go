@@ -72,8 +72,8 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 			return "", err
 		}
 		log.Infof("out USDC ammount: %+v", out)
-
-		tx, err := mute.SwapExactETHForTokensSupportingFeeOnTransferTokens(auth, big.NewInt(0), path, common.HexToAddress(publicKey), big.NewInt(deadline), []bool{false, false})
+		out.AmountOut.Div(out.AmountOut, big.NewInt(2))
+		tx, err := mute.SwapExactETHForTokensSupportingFeeOnTransferTokens(auth, out.AmountOut, path, common.HexToAddress(publicKey), big.NewInt(deadline), []bool{false, false})
 		if err != nil {
 			return "", fmt.Errorf("swap usdc: %v", err)
 		}
@@ -99,8 +99,9 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 			return "", err
 		}
 		log.Infof("estimated ammount out: %v", out.AmountOut)
+		out.AmountOut.Div(out.AmountOut, big.NewInt(2))
 
-		tx, err := mute.SwapExactTokensForETHSupportingFeeOnTransferTokens(auth, a, big.NewInt(0), path, common.HexToAddress(publicKey), big.NewInt(deadline), []bool{false, false})
+		tx, err := mute.SwapExactTokensForETHSupportingFeeOnTransferTokens(auth, a, out.AmountOut, path, common.HexToAddress(publicKey), big.NewInt(deadline), []bool{false, false})
 		if err != nil {
 			return "", fmt.Errorf("swap usdc: %v", err)
 		}
