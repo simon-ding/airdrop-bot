@@ -31,6 +31,7 @@ func (c *ZkClient) Connect() error {
 	}
 	c.Client.client = zp.GetClient()
 	c.provider = zp
+	log.Infof("connect to zksync era rpc success")
 	return nil
 }
 
