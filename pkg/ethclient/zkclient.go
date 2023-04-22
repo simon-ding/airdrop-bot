@@ -35,16 +35,16 @@ func (c *ZkClient) Connect() error {
 	return nil
 }
 
-func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64) error {
+func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)(string, error) {
 	if from != TokenEth && to != TokenEth {
-		return fmt.Errorf("only support eth swap")
+		return "", fmt.Errorf("only support eth swap")
 	}
 
 	var muteIOSwapContractAddress = "0x8B791913eB07C32779a16750e3868aA8495F5964"
 
 	mute, err := abi.NewMuteIo(common.HexToAddress(muteIOSwapContractAddress), c.client)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	publicKey := utils.GetPublicKey(privateKey)
@@ -54,11 +54,12 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 
 	auth, err := c.GetTransactor(privateKey)
 	if err != nil {
-		return err
+		return "", err
 	}
 	auth.GasLimit = uint64(4000000) // in units
 	log.Infof("before transaction: %+v", auth)
 
+	var txHash string
 	if from == TokenEth && to == TokenUSDC {
 		wei := utils.Eth2Wei(big.NewFloat(amount))
 		auth.Value = wei
@@ -68,21 +69,22 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 		}
 		out, err := mute.GetAmountOut(&bind.CallOpts{}, wei, path[0], path[1])
 		if err != nil {
-			return err
+			return "", err
 		}
 		log.Infof("out USDC ammount: %+v", out)
 
 		tx, err := mute.SwapExactETHForTokensSupportingFeeOnTransferTokens(auth, big.NewInt(0), path, common.HexToAddress(publicKey), big.NewInt(deadline), []bool{false, false})
 		if err != nil {
-			return fmt.Errorf("swap usdc: %v", err)
+			return "", fmt.Errorf("swap usdc: %v", err)
 		}
 		log.Infof("swap tx hash: %+v", tx.Hash().Hex())
+		txHash = tx.Hash().Hex()
 	}
 
 	if from == TokenUSDC && to == TokenEth {
 
 		if err := c.ApproveTokenAllowance(TokenUSDC, privateKey, muteIOSwapContractAddress); err != nil {
-			return errors.Wrap(err, "approve allowance")
+			return "", errors.Wrap(err, "approve allowance")
 		}
 
 		a := c.ConvertToken(from, amount)
@@ -94,17 +96,18 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 		}
 		out, err := mute.GetAmountOut(&bind.CallOpts{}, a, path[0], path[1])
 		if err != nil {
-			return err
+			return "", err
 		}
 		log.Infof("estimated ammount out: %v", out.AmountOut)
 
 		tx, err := mute.SwapExactTokensForETHSupportingFeeOnTransferTokens(auth, a, big.NewInt(0), path, common.HexToAddress(publicKey), big.NewInt(deadline), []bool{false, false})
 		if err != nil {
-			return fmt.Errorf("swap usdc: %v", err)
+			return "", fmt.Errorf("swap usdc: %v", err)
 		}
 		log.Infof("swap tx hash: %+v", tx.Hash().Hex())
+		txHash = tx.Hash().Hex()
 
 	}
 
-	return nil
+	return txHash, nil
 }

@@ -45,7 +45,7 @@ func (s *Server) Serve() error {
 	api.POST("/bridge/orbiter", HttpHandler(s.orbiterBridge))
 	api.GET("/address/all", HttpHandler(s.getAllAccounts))
 	api.POST("/address/gen/:num", HttpHandler(s.GenAccounts))
-	api.POST("/address/swap/muteio", HttpHandler(s.SwapEth2USDC))
+	api.POST("/app/muteio/swap/", HttpHandler(s.doMuteIoSwap))
 	return s.r.Run(":8080")
 }
 
