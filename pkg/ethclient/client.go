@@ -295,3 +295,20 @@ func (c *Client) AllTokenBalances(address string) map[string]string {
 	}
 	return res
 }
+
+func (c *Client) CBridgeSend(dst Chain, ammount float64) (string, error) {
+	var contractAddresses = map[Chain]string {
+		ChainArbOne: "0xC97522deAaE1d3D94CC491CC4f81E0B33f33a13a",
+
+	}
+	addr := contractAddresses[c.chain]
+	if addr == "" {
+		return "", errors.Errorf("no contract address on chain: %v", c.chain)
+	}
+	cbridge, err := abi.NewCbridge(common.HexToAddress(addr), c.client)
+	if err != nil {
+		return "", errors.Wrap(err, "new cbridge")
+	}
+	cbridge.Addseq(&bind.CallOpts{})
+	return "", nil
+}

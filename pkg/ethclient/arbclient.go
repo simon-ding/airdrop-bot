@@ -62,7 +62,7 @@ func (a *ArbOneClient) ClaimAidoge(privateKey string) error {
 	// if err != nil {
 	// 	return err
 	// }
-	auth := bind.NewKeyedTransactor(priKey)
+	auth, _ := a.GetTransactor(privateKey)
 	//auth.Nonce = big.NewInt(int64(nonce1) + 4)
 	//auth.Value = big.NewInt(0)      // in wei
 	//auth.GasLimit = uint64(4000000) // in units

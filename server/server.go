@@ -40,7 +40,11 @@ func (s *Server) Serve() error {
 		c.Next()
 	})
 	api := s.r.Group("/api/v1")
-
+	bot := api.Group("/bot")
+	{
+		bot.GET("/settings", HttpHandler(s.GetAllKeyValues))
+		bot.POST("/settings", HttpHandler(s.SetKeyValue))
+	}
 	api.GET("/balance/:id", HttpHandler(s.getBalance))
 	api.POST("/bridge/orbiter", HttpHandler(s.orbiterBridge))
 	api.GET("/address/all", HttpHandler(s.getAllAccounts))
