@@ -4,14 +4,13 @@ import (
 	"airdrop-bot/cfg"
 	"airdrop-bot/db"
 	"airdrop-bot/log"
+	"airdrop-bot/pkg/binance"
 	"airdrop-bot/pkg/ethclient"
 	"airdrop-bot/utils"
 	"fmt"
 	"math/big"
 	"net/http"
 	"strconv"
-	"airdrop-bot/pkg/binance"
-
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +26,7 @@ func NewServer(cfg *cfg.ServerConfig) (*Server, error) {
 type Server struct {
 	cfg *cfg.ServerConfig
 
-	r *gin.Engine
+	r  *gin.Engine
 	bn *binance.Binance
 }
 
@@ -108,7 +107,7 @@ func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
 		}
 		name := h.Name()
 		m := h.AllTokenBalances(ac.Address)
-		for k,v := range m {
+		for k, v := range m {
 			if p, err := s.bn.Price(k); err != nil {
 				log.Errorf("get binance price error %v: %v", k, err)
 			} else {
@@ -117,11 +116,11 @@ func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
 					log.Errorf("parse float: %v", err)
 				} else {
 					f = f.Mul(f, p)
-					m[k] = fmt.Sprintf("%v (%vUSDT)", v, f)
+					m[k] = fmt.Sprintf("%v (%vUSDT)", v, f.Text('g', 1))
 				}
 			}
 		}
-	
+
 		if len(m) == 0 {
 			continue
 		}
@@ -131,9 +130,9 @@ func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
 }
 
 type orbiterInput struct {
-	ToChain   string `json:"to_chain"`
-	FromChain string `json:"from_chain"`
-	Account   int `json:"account"`
+	ToChain   string  `json:"to_chain"`
+	FromChain string  `json:"from_chain"`
+	Account   int     `json:"account"`
 	Amount    float64 `json:"amount"`
 }
 
@@ -156,7 +155,6 @@ func (s *Server) doOrbiterBridge(in orbiterInput) error {
 	if err := hander.Connect(); err != nil {
 		return err
 	}
-
 
 	err := hander.BridgeUseOrbiter(ac.PrivateKey, big.NewFloat(in.Amount), toChain)
 	return err
@@ -205,7 +203,6 @@ func (s *Server) isGasFeeAcceptable() bool {
 	return true
 }
 
-
 func (s *Server) claimAidoge() {
-	
+
 }
