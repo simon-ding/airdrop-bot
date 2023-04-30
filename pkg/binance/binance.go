@@ -4,6 +4,7 @@ import (
 	"airdrop-bot/log"
 	"context"
 	"fmt"
+	"math/big"
 
 	"github.com/adshao/go-binance/v2"
 	"github.com/pkg/errors"
@@ -45,4 +46,19 @@ func (b *Binance) EthBalance() (string, error) {
 		}
 	}
 	return balance, nil
+}
+
+
+func (b *Binance) Price(symbol string) (*big.Float, error) {
+	svc := b.client.NewAveragePriceService()
+	svc.Symbol(symbol + "USDT")
+	resp, err := svc.Do(context.TODO())
+	if err != nil {
+		return nil, errors.Wrap(err, "svc do")
+	}
+	f, _, err := big.NewFloat(0).Parse(resp.Price, 10)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse float")
+	}
+	return f, nil
 }

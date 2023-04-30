@@ -71,10 +71,7 @@ func (s *Server) transferBinanceEth(c *gin.Context) (interface{}, error) {
 		return nil, errors.Errorf("no such account: %v", ac.ID)
 	}
 	
-	key, secret := db.GetBinanceKeySecret()
-	client := binance.New(key, secret)
-
-	err := client.WithdrawEth(req.Network, ac.Address, req.Ammount)
+	err := s.bn.WithdrawEth(req.Network, ac.Address, req.Ammount)
 
 	return nil, errors.Wrap(err, "binance withdraw")
 }

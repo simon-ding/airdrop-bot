@@ -10,6 +10,8 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"airdrop-bot/pkg/binance"
+
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,9 +28,11 @@ type Server struct {
 	cfg *cfg.ServerConfig
 
 	r *gin.Engine
+	bn *binance.Binance
 }
 
 func (s *Server) Serve() error {
+	s.initBinance()
 	s.r.Use(func(c *gin.Context) {
 		token := c.GetHeader(cfg.AuthHeader)
 		if token != s.cfg.Token {
@@ -56,6 +60,12 @@ func (s *Server) Serve() error {
 	api.POST("/address/gen/:num", HttpHandler(s.GenAccounts))
 	api.POST("/app/muteio/swap/", HttpHandler(s.doMuteIoSwap))
 	return s.r.Run(":8080")
+}
+
+func (s *Server) initBinance() {
+	key, secret := db.GetBinanceKeySecret()
+	client := binance.New(key, secret)
+	s.bn = client
 }
 
 func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
@@ -98,6 +108,19 @@ func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
 		}
 		name := h.Name()
 		m := h.AllTokenBalances(ac.Address)
+		for k,v := range m {
+			if p, err := s.bn.Price(k); err != nil {
+				log.Errorf("get binance price error %v: %v", k, err)
+			} else {
+				f, _, err := big.NewFloat(0).Parse(v, 10)
+				if err != nil {
+					log.Errorf("parse float: %v", err)
+				} else {
+					f = f.Mul(f, p)
+					m[k] = fmt.Sprintf("%v (%vUSDT)", v, f)
+				}
+			}
+		}
 	
 		if len(m) == 0 {
 			continue
