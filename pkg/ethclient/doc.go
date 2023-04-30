@@ -8,6 +8,7 @@ import (
 type ChainHandelr interface {
 	Connect() error
 	Name() string
+	ChainID() (*big.Int, error)
 	GetEthBalance(addr string) (*big.Float, error)
 	GetBalance(token Token, address string) (*big.Float, error)
 	Tranfer(from, to string, value *big.Float) error

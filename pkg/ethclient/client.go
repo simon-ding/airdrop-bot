@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -36,6 +37,10 @@ func (c *Client) Connect() error {
 	}
 	c.client = client
 	return nil
+}
+
+func (c *Client) ChainID() (*big.Int, error) {
+	return c.client.ChainID(context.Background())
 }
 
 func (c *Client) GetEthBalance(addr string) (*big.Float, error) {
@@ -262,7 +267,6 @@ func (c *Client) ApproveTokenAllowance(t Token, ownerPrivateKey, spender string)
 	return nil
 }
 
-
 func (c *Client) AllTokenBalances(address string) map[string]string {
 	tokens := []Token{
 		TokenArb,
@@ -296,10 +300,15 @@ func (c *Client) AllTokenBalances(address string) map[string]string {
 	return res
 }
 
-func (c *Client) CBridgeSend(dst Chain, ammount float64) (string, error) {
-	var contractAddresses = map[Chain]string {
-		ChainArbOne: "0xC97522deAaE1d3D94CC491CC4f81E0B33f33a13a",
-
+func (c *Client) CBridgeSend(dst Chain, privateKey string, ammount float64) (string, error) {
+	if ammount <= 0.005 {
+		return "", errors.Errorf("eth should be greater than 0.005")
+	}
+	var contractAddresses = map[Chain]string{
+		ChainEthMain: "0x5427FEFA711Eff984124bFBB1AB6fbf5E3DA1820",
+		ChainArbOne:  "0x1619DE6B6B20eD217a58d00f37B9d47C7663feca",
+		ChainArbNova: "0xb3833Ecd19D4Ff964fA7bc3f8aC070ad5e360E56",
+		ChainZkEra:   "0x54069e96C4247b37C2fbd9559CA99f08CD1CD66c",
 	}
 	addr := contractAddresses[c.chain]
 	if addr == "" {
@@ -309,6 +318,24 @@ func (c *Client) CBridgeSend(dst Chain, ammount float64) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "new cbridge")
 	}
-	cbridge.Addseq(&bind.CallOpts{})
-	return "", nil
+
+	auth, err := c.GetTransactor(privateKey)
+	if err != nil {
+		return "", errors.Wrap(err, "get auth")
+	}
+	wei := utils.Eth2Wei(big.NewFloat(ammount))
+	pubKey := utils.GetPublicKey(privateKey)
+
+	h := GetHandler(dst)
+	h.Connect()
+	id, err := h.ChainID()
+	if err != nil {
+		return "", errors.Wrap(err, "chain id")
+	}
+	tx, err := cbridge.SendNative(auth, common.HexToAddress(pubKey), wei, id.Uint64(), uint64(time.Now().UnixNano()), 259946)
+	if err != nil {
+		return "", errors.Wrap(err, "send native")
+	}
+
+	return tx.Hash().Hex(), nil
 }
