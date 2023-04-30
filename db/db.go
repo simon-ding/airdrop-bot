@@ -5,6 +5,7 @@ import (
 	"airdrop-bot/ent"
 	"airdrop-bot/ent/account"
 	"airdrop-bot/ent/node"
+	"airdrop-bot/ent/settings"
 	"airdrop-bot/ent/steprun"
 	"airdrop-bot/log"
 	"context"
@@ -110,4 +111,13 @@ func PickANodeRandom() *ent.Node {
 		return nil
 	}
 	return n
+}
+
+func GetBinanceKeySecret() (string, string) {
+	var key = "binance_key"
+	var secret = "binance_secret"
+
+	biKey := client.Settings.Query().Where(settings.Key(key)).FirstX(context.Background())
+	biSecret := client.Settings.Query().Where(settings.Key(secret)).FirstX(context.Background())
+	return biKey.Value, biSecret.Value
 }

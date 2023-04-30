@@ -1,16 +1,16 @@
 package binance
 
 import (
-	"airdrop-bot/cfg"
 	"airdrop-bot/log"
 	"context"
 	"fmt"
+
 	"github.com/adshao/go-binance/v2"
 	"github.com/pkg/errors"
 )
 
-func New(cfg *cfg.Binance) *Binance {
-	client := binance.NewClient(cfg.ApiKey, cfg.SecretKey)
+func New(key, secret string) *Binance {
+	client := binance.NewClient(key, secret)
 
 	return &Binance{client: client}
 }

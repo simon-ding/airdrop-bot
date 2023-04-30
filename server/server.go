@@ -45,6 +45,10 @@ func (s *Server) Serve() error {
 		bot.GET("/settings", HttpHandler(s.GetAllKeyValues))
 		bot.POST("/settings", HttpHandler(s.SetKeyValue))
 	}
+	binance := api.Group("/binance")
+	{
+		binance.GET("/balance", HttpHandler(s.BinanceEthBalance))
+	}
 	api.GET("/balance/:id", HttpHandler(s.getBalance))
 	api.POST("/bridge/orbiter", HttpHandler(s.orbiterBridge))
 	api.GET("/address/all", HttpHandler(s.getAllAccounts))
