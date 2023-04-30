@@ -116,7 +116,7 @@ func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
 					log.Errorf("parse float: %v", err)
 				} else {
 					f = f.Mul(f, p)
-					m[k] = fmt.Sprintf("%v (%vUSDT)", v, f.Text('g', 1))
+					m[k] = fmt.Sprintf("%v (%vUSDT)", v, f.Text('g', 4))
 				}
 			}
 		}
