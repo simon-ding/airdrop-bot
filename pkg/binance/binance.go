@@ -60,5 +60,6 @@ func (b *Binance) Price(symbol string) (*big.Float, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "parse float")
 	}
+	f = f.SetPrec(1)
 	return f, nil
 }
