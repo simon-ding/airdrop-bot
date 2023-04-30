@@ -35,7 +35,7 @@ func (s *Server) SetKeyValue(c *gin.Context) (interface{}, error) {
 	kv, err := db.GetClient().Settings.Query().Where(settings.Key(req.Key)).First(context.TODO())
 	if err != nil {
 		db.GetClient().Settings.Create().SetKey(req.Key).SetValue(req.Value).SaveX(context.Background())
-		return nil, err
+		return nil, errors.Wrap(err, "get settings")
 	}
 	log.Infof("exist key value: %v", kv)
 	db.GetClient().Settings.UpdateOneID(kv.ID).SetValue(req.Value).SaveX(context.Background())
@@ -47,6 +47,34 @@ func (s *Server) BinanceEthBalance(c *gin.Context) (interface{}, error) {
 
 	client := binance.New(key, secret)
 	b, err := client.EthBalance()
-	
+
 	return b, err
+}
+
+type transferBinanceEthInput struct {
+	Network   string  `json:"network"`
+	AccountID int     `json:"account_id"`
+	Ammount   float64 `json:"ammount"`
+}
+
+func (s *Server) transferBinanceEth(c *gin.Context) (interface{}, error) {
+	var req transferBinanceEthInput
+	if err := c.BindJSON(&req); err != nil {
+		return nil, errors.Wrap(err, "bind json")
+	}
+	if req.Network != "arbitrum" {
+		return nil, errors.Errorf("not supported network: %v", req.Network)
+	}
+	ac := db.FindAccount(req.AccountID)
+	log.Infof("query account: %v	", ac.Address)
+	if ac.Address == "" {
+		return nil, errors.Errorf("no such account: %v", ac.ID)
+	}
+	
+	key, secret := db.GetBinanceKeySecret()
+	client := binance.New(key, secret)
+
+	err := client.WithdrawEth(req.Network, ac.Address, req.Ammount)
+
+	return nil, errors.Wrap(err, "binance withdraw")
 }

@@ -48,6 +48,7 @@ func (s *Server) Serve() error {
 	binance := api.Group("/binance")
 	{
 		binance.GET("/balance", HttpHandler(s.BinanceEthBalance))
+		binance.POST("/transfer", HttpHandler(s.transferBinanceEth))
 	}
 	api.GET("/balance/:id", HttpHandler(s.getBalance))
 	api.POST("/bridge/orbiter", HttpHandler(s.orbiterBridge))
