@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
 )
 
@@ -82,7 +83,8 @@ func (c *Client) GasPrice() *big.Float {
 	if err != nil {
 		log.Errorf("get gas price error: %v", err)
 	}
-	return utils.Wei2Eth(gas)
+	f := big.NewFloat(0).SetInt(gas)
+	return f.Quo(f, big.NewFloat(params.GWei))
 }
 
 func (c *Client) Tranfer(from, to string, value *big.Float) error {
@@ -199,6 +201,7 @@ func (c *Client) ConvertToken(t Token, ammount float64) *big.Int {
 	a.Int(r)
 	return r
 }
+
 
 func (c *Client) GetTransactor(privateKey string) (*bind.TransactOpts, error) {
 	// publicKey := utils.GetPublicKeyFromPrivateKey(privateKey)

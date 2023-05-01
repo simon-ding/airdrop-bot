@@ -5,6 +5,7 @@ import (
 	"airdrop-bot/ent/settings"
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/binance"
+	"airdrop-bot/pkg/ethclient"
 	"airdrop-bot/utils"
 	"context"
 	"strconv"
@@ -121,6 +122,27 @@ func (s *Server) isGasFeeAcceptable() bool {
 	return true
 }
 
-func (s *Server) claimAidoge() {
+func (s *Server) getGasPrices(c *gin.Context) (interface{}, error)  {
+	c1 := ethclient.NewEthClient()
+	c1.Connect()
+	p1 := c1.GasPrice()
 
+	c2 := ethclient.NewArbOneClient()
+	c2.Connect()
+	p2 := c2.GasPrice()
+
+	c3 := ethclient.NewZkClient()
+	c3.Connect()
+	p3 := c3.GasPrice()
+
+	c4 := ethclient.NewArbNovaClient()
+	c4.Connect()
+	p4 := c4.GasPrice()
+
+	return map[string]string {
+		ethclient.ChainEthMain.String(): p1.Text('g', 3),
+		ethclient.ChainArbOne.String(): p2.Text('g', 3),
+		ethclient.ChainZkEra.String(): p3.Text('g', 3),
+		ethclient.ChainArbNova.String(): p4.Text('g', 3),
+	}, nil
 }

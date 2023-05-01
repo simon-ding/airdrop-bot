@@ -47,6 +47,7 @@ func (s *Server) Serve() error {
 	{
 		bot.GET("/settings", HttpHandler(s.GetAllKeyValues))
 		bot.POST("/settings", HttpHandler(s.SetKeyValue))
+		bot.GET("/gasprice", HttpHandler(s.getGasPrices))
 	}
 	binance := api.Group("/binance")
 	{
