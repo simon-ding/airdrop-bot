@@ -5,7 +5,9 @@ import (
 	"airdrop-bot/ent/settings"
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/binance"
+	"airdrop-bot/utils"
 	"context"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -70,8 +72,55 @@ func (s *Server) transferBinanceEth(c *gin.Context) (interface{}, error) {
 	if ac.Address == "" {
 		return nil, errors.Errorf("no such account: %v", ac.ID)
 	}
-	
+
 	err := s.bn.WithdrawEth(req.Network, ac.Address, req.Ammount)
 
 	return nil, errors.Wrap(err, "binance withdraw")
+}
+
+func (s *Server) GenAccounts(c *gin.Context) (interface{}, error) {
+	n := c.Param("num")
+	num, err := strconv.Atoi(n)
+	if err != nil {
+		return nil, err
+	}
+	s.genAccounts(num)
+	return nil, nil
+}
+
+func (s *Server) genAccounts(num int) {
+	accountNum := db.AccountNum()
+	if accountNum == num {
+		log.Infof("accounts have already been generated,skip")
+		return
+	}
+	log.Infof("try to generate %d accounts", num-accountNum)
+	for i := 0; i < num-accountNum; i++ {
+		mnemonic, address, priKey := utils.NewEthAccount()
+		log.Infof("generate eth account: %s", address)
+		db.SaveAccount(mnemonic, address, priKey)
+	}
+}
+
+func (s *Server) isGasFeeAcceptable() bool {
+	fee, err := utils.GetGasFee(nil)
+	if err != nil {
+		log.Errorf("get gas fee error: %v", err)
+		return false
+	}
+	if len(fee.Speeds) == 0 {
+		log.Infof("api return no fee: %+v", fee)
+		return false
+	}
+	log.Infof("current gas fee is %+v", fee.Speeds)
+
+	if fee.Speeds[1].EstimatedFee > 7 {
+		log.Errorf("gas fee too high: %v", fee.Speeds[1].EstimatedFee)
+		return false
+	}
+	return true
+}
+
+func (s *Server) claimAidoge() {
+
 }

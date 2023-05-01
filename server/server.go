@@ -6,13 +6,13 @@ import (
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/binance"
 	"airdrop-bot/pkg/ethclient"
-	"airdrop-bot/utils"
 	"fmt"
 	"math/big"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 )
 
 func NewServer(cfg *cfg.ServerConfig) (*Server, error) {
@@ -53,11 +53,16 @@ func (s *Server) Serve() error {
 		binance.GET("/balance", HttpHandler(s.BinanceEthBalance))
 		binance.POST("/transfer", HttpHandler(s.transferBinanceEth))
 	}
+	app := api.Group("/app")
+	{
+		app.POST("/muteio/swap/", HttpHandler(s.doMuteIoSwap))
+		app.POST("/cbridge/send", HttpHandler(s.cbridgeSend))
+	}
 	api.GET("/balance/:id", HttpHandler(s.getBalance))
 	api.POST("/bridge/orbiter", HttpHandler(s.orbiterBridge))
 	api.GET("/address/all", HttpHandler(s.getAllAccounts))
 	api.POST("/address/gen/:num", HttpHandler(s.GenAccounts))
-	api.POST("/app/muteio/swap/", HttpHandler(s.doMuteIoSwap))
+	
 	return s.r.Run(":8080")
 }
 
@@ -160,49 +165,32 @@ func (s *Server) doOrbiterBridge(in orbiterInput) error {
 	return err
 }
 
-func (s *Server) GenAccounts(c *gin.Context) (interface{}, error) {
-	n := c.Param("num")
-	num, err := strconv.Atoi(n)
+type cbridgeSendInput struct {
+	DstChain string `json:"dst_chain"`
+	SrcChain string `json:"src_chain"`
+	Ammount float64 `json:"ammount"`
+	AccountID int `json:"account_id"`
+}
+
+func (s *Server) cbridgeSend(c *gin.Context) (interface{}, error) {
+	var req cbridgeSendInput
+	if err := c.BindJSON(&req); err != nil {
+		return nil, errors.Wrap(err, "bind json")
+	}
+
+	ac := db.FindAccount(req.AccountID)
+	log.Infof("query account: %v	", ac.Address)
+	if ac.Address == "" {
+		return nil, errors.Errorf("no such account: %v", ac.ID)
+	}
+
+	src := ethclient.GetChain(req.SrcChain)
+	dst := ethclient.GetChain(req.DstChain)
+	
+	h := ethclient.GetHandler(src)
+	tx, err := h.CBridgeSend(dst, ac.PrivateKey, req.Ammount)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "cbridge send")
 	}
-	s.genAccounts(num)
-	return nil, nil
-}
-
-func (s *Server) genAccounts(num int) {
-	accountNum := db.AccountNum()
-	if accountNum == num {
-		log.Infof("accounts have already been generated,skip")
-		return
-	}
-	log.Infof("try to generate %d accounts", num-accountNum)
-	for i := 0; i < num-accountNum; i++ {
-		mnemonic, address, priKey := utils.NewEthAccount()
-		log.Infof("generate eth account: %s", address)
-		db.SaveAccount(mnemonic, address, priKey)
-	}
-}
-
-func (s *Server) isGasFeeAcceptable() bool {
-	fee, err := utils.GetGasFee(nil)
-	if err != nil {
-		log.Errorf("get gas fee error: %v", err)
-		return false
-	}
-	if len(fee.Speeds) == 0 {
-		log.Infof("api return no fee: %+v", fee)
-		return false
-	}
-	log.Infof("current gas fee is %+v", fee.Speeds)
-
-	if fee.Speeds[1].EstimatedFee > 7 {
-		log.Errorf("gas fee too high: %v", fee.Speeds[1].EstimatedFee)
-		return false
-	}
-	return true
-}
-
-func (s *Server) claimAidoge() {
-
+	return tx, nil
 }

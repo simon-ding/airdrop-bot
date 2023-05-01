@@ -324,6 +324,8 @@ func (c *Client) CBridgeSend(dst Chain, privateKey string, ammount float64) (str
 		return "", errors.Wrap(err, "get auth")
 	}
 	wei := utils.Eth2Wei(big.NewFloat(ammount))
+	auth.Value = wei
+
 	pubKey := utils.GetPublicKey(privateKey)
 
 	h := GetHandler(dst)
@@ -336,6 +338,5 @@ func (c *Client) CBridgeSend(dst Chain, privateKey string, ammount float64) (str
 	if err != nil {
 		return "", errors.Wrap(err, "send native")
 	}
-
 	return tx.Hash().Hex(), nil
 }

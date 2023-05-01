@@ -62,3 +62,7 @@ func (b *Binance) Price(symbol string) (*big.Float, error) {
 	}
 	return f, nil
 }
+
+func (b *Binance) GasPrice(gwei int) (string, error) {
+	return "", nil
+}
