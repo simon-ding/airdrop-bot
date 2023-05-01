@@ -188,6 +188,7 @@ func (s *Server) cbridgeSend(c *gin.Context) (interface{}, error) {
 	dst := ethclient.GetChain(req.DstChain)
 	
 	h := ethclient.GetHandler(src)
+	h.Connect()
 	tx, err := h.CBridgeSend(dst, ac.PrivateKey, req.Ammount)
 	if err != nil {
 		return nil, errors.Wrap(err, "cbridge send")
