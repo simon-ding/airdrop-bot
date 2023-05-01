@@ -214,6 +214,10 @@ func (c *Client) GetTransactor(privateKey string) (*bind.TransactOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	tipCap, err := c.client.SuggestGasTipCap(context.Background())
+	if err != nil {
+		return nil, err
+	}
 	pkey, err := crypto.HexToECDSA(privateKey)
 	if err != nil {
 		return nil, err
@@ -231,6 +235,7 @@ func (c *Client) GetTransactor(privateKey string) (*bind.TransactOpts, error) {
 	auth.Value = big.NewInt(0)       // in wei
 	auth.GasLimit = uint64(10000000) // in units
 	auth.GasPrice = gasPrice
+	auth.GasTipCap = tipCap
 	log.Infof("before transaction: %+v", auth)
 
 	return auth, nil
