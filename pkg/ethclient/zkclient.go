@@ -25,7 +25,7 @@ type ZkClient struct {
 
 func (c *ZkClient) Connect() error {
 	// also, init ZkSync Provider, specify ZkSync2 RPC URL (e.g. testnet)
-	zp, err := zksync2.NewDefaultProvider("https://mainnet.era.zksync.io")
+	zp, err := zksync2.NewDefaultProvider("https://zksync-era.rpc.thirdweb.com")
 	if err != nil {
 		return fmt.Errorf("coonect to zksync network: %v", err)
 	}
