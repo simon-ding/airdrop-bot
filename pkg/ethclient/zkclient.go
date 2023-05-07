@@ -112,3 +112,20 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 
 	return txHash, nil
 }
+
+
+func (c *ZkClient) SyncSwap() error {
+	const syncSwapContractAddress = "0x2da10A1e27bF85cEdD8FFb1AbBe97e53391C0295"
+
+	tokenAddress := common.HexToAddress(syncSwapContractAddress)
+	syncClient, err := abi.NewSyncSwapRouter(tokenAddress, c.client)
+	if err != nil {
+		return err
+	}
+	addr, err := syncClient.WETH(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	log.Infof("vault address: %v", addr.Hex())
+	return nil
+}

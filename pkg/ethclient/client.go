@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -202,7 +203,6 @@ func (c *Client) ConvertToken(t Token, ammount float64) *big.Int {
 	return r
 }
 
-
 func (c *Client) GetTransactor(privateKey string) (*bind.TransactOpts, error) {
 	// publicKey := utils.GetPublicKeyFromPrivateKey(privateKey)
 	// nonce, err := c.client.PendingNonceAt(context.Background(), common.HexToAddress(publicKey))
@@ -347,4 +347,15 @@ func (c *Client) CBridgeSend(dst Chain, privateKey string, ammount float64) (str
 		return "", errors.Wrap(err, "send native")
 	}
 	return tx.Hash().Hex(), nil
+}
+
+
+func (c *Client) EstimatedGas() {
+	addr := common.HexToAddress("0x0000000000000000000000000000000000000000")
+
+	f, err := c.client.EstimateGas(context.Background(), ethereum.CallMsg{
+		From: addr,
+		To: &addr,
+	})
+	log.Infof("estimated: %v, %v", f, err)
 }

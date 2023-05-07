@@ -75,6 +75,7 @@ func (a *ArbOneClient) ClaimAidoge(privateKey string) error {
 	addr := "0x0000000000000000000000000000000000000000"
 
 	log.Infof("nonce: %v", nonce)
+
 	hash := crypto.Keccak256(
 		common.LeftPadBytes(common.HexToAddress(contractAddr).Bytes(), 32),
 		common.LeftPadBytes(publicKeyBytes, 32),
@@ -102,18 +103,3 @@ type ArbNovaClient struct {
 	*Client
 }
 
-const syncSwapContractAddress = "0x2da10A1e27bF85cEdD8FFb1AbBe97e53391C0295"
-
-func (a *ArbNovaClient) SyncSwap() error {
-	tokenAddress := common.HexToAddress(syncSwapContractAddress)
-	syncClient, err := abi.NewSyncSwapRouter(tokenAddress, a.client)
-	if err != nil {
-		return err
-	}
-	addr, err := syncClient.WETH(&bind.CallOpts{})
-	if err != nil {
-		return err
-	}
-	log.Infof("vault address: %v", addr.Hex())
-	return nil
-}
