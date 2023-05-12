@@ -26,6 +26,7 @@ type ZkClient struct {
 func (c *ZkClient) Connect() error {
 	// also, init ZkSync Provider, specify ZkSync2 RPC URL (e.g. testnet)
 	zp, err := zksync2.NewDefaultProvider("https://zksync-era.rpc.thirdweb.com")
+	//zp, err := zksync2.NewDefaultProvider("https://mainnet.era.zksync.io")
 	if err != nil {
 		return fmt.Errorf("coonect to zksync network: %v", err)
 	}
@@ -75,7 +76,7 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 		out.AmountOut.Div(out.AmountOut, big.NewInt(2))
 		tx, err := mute.SwapExactETHForTokensSupportingFeeOnTransferTokens(auth, out.AmountOut, path, common.HexToAddress(publicKey), big.NewInt(deadline), []bool{false, false})
 		if err != nil {
-			return "", fmt.Errorf("swap usdc: %v", err)
+			return "", fmt.Errorf("swap to usdc: %v", err)
 		}
 		log.Infof("swap tx hash: %+v", tx.Hash().Hex())
 		txHash = tx.Hash().Hex()
@@ -103,7 +104,7 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 
 		tx, err := mute.SwapExactTokensForETHSupportingFeeOnTransferTokens(auth, a, out.AmountOut, path, common.HexToAddress(publicKey), big.NewInt(deadline), []bool{false, false})
 		if err != nil {
-			return "", fmt.Errorf("swap usdc: %v", err)
+			return "", fmt.Errorf("swap tp eth: %v", err)
 		}
 		log.Infof("swap tx hash: %+v", tx.Hash().Hex())
 		txHash = tx.Hash().Hex()
@@ -114,14 +115,38 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 }
 
 
-func (c *ZkClient) SyncSwap() error {
+func (c *ZkClient) SyncSwap(privateKey string, ammount *big.Float) error {
 	const syncSwapContractAddress = "0x2da10A1e27bF85cEdD8FFb1AbBe97e53391C0295"
+	const classicPoolFactoryAddr = "0xf2DAd89f2788a8CD54625C60b55cD3d2D0ACa7Cb"
+	//const poolMasterAddr = "0xbB05918E9B4bA9Fe2c8384d223f0844867909Ffb"
+
+	wethAddr := GetContractAddress(ChainZkEra, TokenWETH)
+	usdcAddr := GetContractAddress(ChainZkEra, TokenUSDC)
+	classicPoolFact, err := abi.NewSyncSwapPoolFactory(common.HexToAddress(classicPoolFactoryAddr), c.client)
+	if err != nil {
+		return errors.Wrap(err, "new classic pool")
+	}
+	poolAddr, err := classicPoolFact.GetPool(&bind.CallOpts{}, common.HexToAddress(wethAddr), common.HexToAddress(usdcAddr))
+	if err != nil {
+		return errors.Wrap(err, "get pool")
+	}
+	pool, err := abi.NewSyncSwapClassicPool(poolAddr, c.client)
+	if err != nil {
+		return errors.Wrap(err, "new pool")
+	}
+	a, err := pool.GetReserves(&bind.CallOpts{})
+	log.Infof("get reserves: %v, %v", a, err)
 
 	tokenAddress := common.HexToAddress(syncSwapContractAddress)
 	syncClient, err := abi.NewSyncSwapRouter(tokenAddress, c.client)
 	if err != nil {
 		return err
 	}
+	// auth, err := c.GetTransactor(privateKey)
+	// path = []abi.IRouterSwapPath{
+		
+	// }
+	// syncClient.Swap(auth, )
 	addr, err := syncClient.WETH(&bind.CallOpts{})
 	if err != nil {
 		return err
