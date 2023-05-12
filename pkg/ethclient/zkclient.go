@@ -57,7 +57,7 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 	if err != nil {
 		return "", err
 	}
-	auth.GasLimit = uint64(4000000) // in units
+	//auth.GasLimit = uint64(4000000) // in units
 	log.Infof("before transaction: %+v", auth)
 
 	var txHash string
