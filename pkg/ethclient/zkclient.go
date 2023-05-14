@@ -4,12 +4,14 @@ import (
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/abi"
 	"airdrop-bot/utils"
+	"context"
 	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pkg/errors"
 	"github.com/zksync-sdk/zksync2-go"
 )
@@ -36,7 +38,34 @@ func (c *ZkClient) Connect() error {
 	return nil
 }
 
-func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)(string, error) {
+func (c *ZkClient) GetTransactor(privateKey string) (*bind.TransactOpts, error) {
+	gasPrice, err := c.client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	pkey, err := crypto.HexToECDSA(privateKey)
+	if err != nil {
+		return nil, err
+	}
+	chainId, err := c.client.ChainID(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	//log.Infof("chain id: %v", chainId)
+	auth, err := bind.NewKeyedTransactorWithChainID(pkey, chainId)
+	if err != nil {
+		return nil, err
+	}
+	// auth.Nonce = big.NewInt(10)
+	// auth.Value = big.NewInt(0)       // in wei
+	// auth.GasLimit = uint64(10000000) // in units
+	auth.GasPrice = gasPrice
+	//log.Infof("before transaction: %+v", auth)
+
+	return auth, nil
+}
+
+func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64) (string, error) {
 	if from != TokenEth && to != TokenEth {
 		return "", fmt.Errorf("only support eth swap")
 	}
@@ -104,7 +133,7 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 
 		tx, err := mute.SwapExactTokensForETHSupportingFeeOnTransferTokens(auth, a, out.AmountOut, path, common.HexToAddress(publicKey), big.NewInt(deadline), []bool{false, false})
 		if err != nil {
-			return "", fmt.Errorf("swap tp eth: %v", err)
+			return "", fmt.Errorf("swap to eth: %v", err)
 		}
 		log.Infof("swap tx hash: %+v", tx.Hash().Hex())
 		txHash = tx.Hash().Hex()
@@ -113,7 +142,6 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 
 	return txHash, nil
 }
-
 
 func (c *ZkClient) SyncSwap(privateKey string, ammount *big.Float) error {
 	const syncSwapContractAddress = "0x2da10A1e27bF85cEdD8FFb1AbBe97e53391C0295"
@@ -144,7 +172,7 @@ func (c *ZkClient) SyncSwap(privateKey string, ammount *big.Float) error {
 	}
 	// auth, err := c.GetTransactor(privateKey)
 	// path = []abi.IRouterSwapPath{
-		
+
 	// }
 	// syncClient.Swap(auth, )
 	addr, err := syncClient.WETH(&bind.CallOpts{})
