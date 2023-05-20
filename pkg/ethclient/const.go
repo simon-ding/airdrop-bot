@@ -53,6 +53,8 @@ func (c Chain) String() string {
 	return ""
 }
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+
 func GetChain(name string) Chain {
 
 	for  i := Chain(0);i < 100;i++ {

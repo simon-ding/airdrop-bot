@@ -4,7 +4,10 @@ import (
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/abi"
 	"airdrop-bot/utils"
+	"bytes"
 	"context"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"time"
@@ -143,24 +146,27 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 	return txHash, nil
 }
 
-func (c *ZkClient) SyncSwap(privateKey string, ammount *big.Float) error {
+func (c *ZkClient) SyncSwap(privateKey string, ammount *big.Float) (string, error) {
 	const syncSwapContractAddress = "0x2da10A1e27bF85cEdD8FFb1AbBe97e53391C0295"
 	const classicPoolFactoryAddr = "0xf2DAd89f2788a8CD54625C60b55cD3d2D0ACa7Cb"
 	//const poolMasterAddr = "0xbB05918E9B4bA9Fe2c8384d223f0844867909Ffb"
 
 	wethAddr := GetContractAddress(ChainZkEra, TokenWETH)
 	usdcAddr := GetContractAddress(ChainZkEra, TokenUSDC)
+
+
 	classicPoolFact, err := abi.NewSyncSwapPoolFactory(common.HexToAddress(classicPoolFactoryAddr), c.client)
 	if err != nil {
-		return errors.Wrap(err, "new classic pool")
+		return "", errors.Wrap(err, "new classic pool")
 	}
 	poolAddr, err := classicPoolFact.GetPool(&bind.CallOpts{}, common.HexToAddress(wethAddr), common.HexToAddress(usdcAddr))
 	if err != nil {
-		return errors.Wrap(err, "get pool")
+		return "", errors.Wrap(err, "get pool")
 	}
+	log.Infof("pool addr: %v", poolAddr.Hex())
 	pool, err := abi.NewSyncSwapClassicPool(poolAddr, c.client)
 	if err != nil {
-		return errors.Wrap(err, "new pool")
+		return "", errors.Wrap(err, "new pool")
 	}
 	a, err := pool.GetReserves(&bind.CallOpts{})
 	log.Infof("get reserves: %v, %v", a, err)
@@ -168,17 +174,55 @@ func (c *ZkClient) SyncSwap(privateKey string, ammount *big.Float) error {
 	tokenAddress := common.HexToAddress(syncSwapContractAddress)
 	syncClient, err := abi.NewSyncSwapRouter(tokenAddress, c.client)
 	if err != nil {
-		return err
+		return "", err
 	}
-	// auth, err := c.GetTransactor(privateKey)
-	// path = []abi.IRouterSwapPath{
+	ammountWei := utils.Eth2Wei(ammount)
 
-	// }
-	// syncClient.Swap(auth, )
-	addr, err := syncClient.WETH(&bind.CallOpts{})
-	if err != nil {
-		return err
+	// Constructs the swap paths with steps.
+	// Determine withdraw mode, to withdraw native ETH or wETH on last step.
+	// 0 - vault internal transfer
+	// 1 - withdraw and unwrap to naitve ETH
+	// 2 - withdraw and wrap to wETH
+	withdrawMode := uint8(1) // 1 or 2 to withdraw to user's wallet
+
+	var buff bytes.Buffer
+	binary.Write(&buff, binary.LittleEndian, withdrawMode)
+	log.Infof("buffer: %v", buff.String())
+	var data []byte
+	wethBytes := common.LeftPadBytes(common.HexToAddress(wethAddr).Bytes(), 32)
+	publicBytes := common.LeftPadBytes(common.HexToAddress(utils.GetPublicKey(privateKey)).Bytes(), 32)
+	modeBytes := common.LeftPadBytes(buff.Bytes(), 32)
+	data = append(data, wethBytes...)
+	data = append(data, publicBytes...)
+	data = append(data, modeBytes...)
+	log.Infof("sync swap data: %v", hex.EncodeToString(data))
+	auth, err := c.GetTransactor(privateKey)
+
+	auth.Value = ammountWei
+
+	steps := []abi.IRouterSwapStep{
+		{
+			Pool:         poolAddr,
+			Data:         data,
+			Callback:     common.HexToAddress(ZERO_ADDRESS),
+			CallbackData: []byte(""),
+		},
 	}
-	log.Infof("vault address: %v", addr.Hex())
-	return nil
+	path := []abi.IRouterSwapPath{
+		{
+			Steps:    steps,
+			TokenIn:  common.HexToAddress(ZERO_ADDRESS),
+			AmountIn: ammountWei,
+		},
+	}
+	log.Infof("sync swap path: %+v", path)
+	deadline := time.Now().Add(20 * time.Minute).Unix()
+
+	tx, err := syncClient.Swap(auth, path, big.NewInt(0), big.NewInt(deadline))
+	if err != nil {
+		return "", errors.Wrap(err, "syncswap")
+	}
+	log.Infof("syncswap address: %v", tx.Hash().Hex())
+
+	return tx.Hash().Hex(), nil
 }
