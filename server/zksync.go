@@ -86,7 +86,7 @@ func (s *Server) doSyncSwap(c *gin.Context) (interface{}, error) {
 }
 
 func (s *Server) getTransaction(c *gin.Context) (interface{}, error) {
-	var apiUrl = "https://zksync2-mainnet-explorer.zksync.io/transactions?limit=1000&direction=older&accountAddress="
+	var apiUrl = "https://zksync2-mainnet-explorer.zksync.io/transactions?limit=100&direction=older&accountAddress="
 
 	id := c.Param("id")
 	idd, err := strconv.Atoi(id)
