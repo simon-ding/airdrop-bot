@@ -181,7 +181,7 @@ func (c *Client) Name() string {
 	return c.chain.String()
 }
 
-func (c *Client) ConvertToken(t Token, ammount float64) *big.Int {
+func (c *Client) ConvertToken(t Token, ammount *big.Float) *big.Int {
 	addr := GetContractAddress(c.chain, t)
 	erc20, err := abi.NewErc20(common.HexToAddress(addr), c.client)
 	if err != nil {
@@ -193,7 +193,7 @@ func (c *Client) ConvertToken(t Token, ammount float64) *big.Int {
 		log.Errorf("get decimals: %v", err)
 		return nil
 	}
-	a := big.NewFloat(ammount)
+	a := ammount
 	b := new(big.Float)
 	b.SetInt(big.NewInt(int64(math.Pow10(int(d)))))
 	a.Mul(a, b)
@@ -241,7 +241,7 @@ func (c *Client) GetTransactor(privateKey string) (*bind.TransactOpts, error) {
 	return auth, nil
 }
 
-func (c *Client) ApproveTokenAllowance(t Token, ownerPrivateKey, spender string) error {
+func (c *Client) ApproveTokenAllowance(t Token, ownerPrivateKey, spender string, getAuth func(string) (*bind.TransactOpts, error)) error {
 	contractAddr := GetContractAddress(c.chain, t)
 	erc20, err := abi.NewErc20(common.HexToAddress(contractAddr), c.client)
 	if err != nil {
@@ -258,7 +258,7 @@ func (c *Client) ApproveTokenAllowance(t Token, ownerPrivateKey, spender string)
 		return nil
 	}
 
-	auth, err := c.GetTransactor(ownerPrivateKey)
+	auth, err := getAuth(ownerPrivateKey)
 	if err != nil {
 		return err
 	}

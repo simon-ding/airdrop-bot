@@ -116,11 +116,11 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 
 	if from == TokenUSDC && to == TokenEth {
 
-		if err := c.ApproveTokenAllowance(TokenUSDC, privateKey, muteIOSwapContractAddress); err != nil {
+		if err := c.ApproveTokenAllowance(TokenUSDC, privateKey, muteIOSwapContractAddress, c.GetTransactor); err != nil {
 			return "", errors.Wrap(err, "approve allowance")
 		}
 
-		a := c.ConvertToken(from, amount)
+		a := c.ConvertToken(from, big.NewFloat(amount))
 		log.Infof("converted: %v", a)
 		//auth.Value = a
 		path := []common.Address{
@@ -146,7 +146,7 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 	return txHash, nil
 }
 
-func (c *ZkClient) SyncSwap(privateKey string, ammount *big.Float) (string, error) {
+func (c *ZkClient) SyncSwapEth2Usdc(privateKey string, ammount *big.Float) (string, error) {
 	const syncSwapContractAddress = "0x2da10A1e27bF85cEdD8FFb1AbBe97e53391C0295"
 	const classicPoolFactoryAddr = "0xf2DAd89f2788a8CD54625C60b55cD3d2D0ACa7Cb"
 	//const poolMasterAddr = "0xbB05918E9B4bA9Fe2c8384d223f0844867909Ffb"
@@ -225,4 +225,87 @@ func (c *ZkClient) SyncSwap(privateKey string, ammount *big.Float) (string, erro
 	log.Infof("syncswap address: %v", tx.Hash().Hex())
 
 	return tx.Hash().Hex(), nil
+}
+
+
+func (c *ZkClient) SyncSwapUsdc2Eth(privateKey string, ammount *big.Float) (string, error) {
+	const syncSwapContractAddress = "0x2da10A1e27bF85cEdD8FFb1AbBe97e53391C0295"
+	const classicPoolFactoryAddr = "0xf2DAd89f2788a8CD54625C60b55cD3d2D0ACa7Cb"
+	//const poolMasterAddr = "0xbB05918E9B4bA9Fe2c8384d223f0844867909Ffb"
+
+	wethAddr := GetContractAddress(ChainZkEra, TokenWETH)
+	usdcAddr := GetContractAddress(ChainZkEra, TokenUSDC)
+
+
+	classicPoolFact, err := abi.NewSyncSwapPoolFactory(common.HexToAddress(classicPoolFactoryAddr), c.client)
+	if err != nil {
+		return "", errors.Wrap(err, "new classic pool")
+	}
+	poolAddr, err := classicPoolFact.GetPool(&bind.CallOpts{}, common.HexToAddress(usdcAddr), common.HexToAddress(wethAddr))
+	if err != nil {
+		return "", errors.Wrap(err, "get pool")
+	}
+	log.Infof("pool addr: %v", poolAddr.Hex())
+	pool, err := abi.NewSyncSwapClassicPool(poolAddr, c.client)
+	if err != nil {
+		return "", errors.Wrap(err, "new pool")
+	}
+	a, err := pool.GetReserves(&bind.CallOpts{})
+	log.Infof("get reserves: %v, %v", a, err)
+
+	tokenAddress := common.HexToAddress(syncSwapContractAddress)
+	syncClient, err := abi.NewSyncSwapRouter(tokenAddress, c.client)
+	if err != nil {
+		return "", err
+	}
+
+	// Constructs the swap paths with steps.
+	// Determine withdraw mode, to withdraw native ETH or wETH on last step.
+	// 0 - vault internal transfer
+	// 1 - withdraw and unwrap to naitve ETH
+	// 2 - withdraw and wrap to wETH
+	withdrawMode := uint8(1) // 1 or 2 to withdraw to user's wallet
+
+	var buff bytes.Buffer
+	binary.Write(&buff, binary.LittleEndian, withdrawMode)
+	log.Infof("buffer: %v", buff.String())
+	var data []byte
+	usdcBytes := common.LeftPadBytes(common.HexToAddress(usdcAddr).Bytes(), 32)
+	publicBytes := common.LeftPadBytes(common.HexToAddress(utils.GetPublicKey(privateKey)).Bytes(), 32)
+	modeBytes := common.LeftPadBytes(buff.Bytes(), 32)
+	data = append(data, usdcBytes...)
+	data = append(data, publicBytes...)
+	data = append(data, modeBytes...)
+	log.Infof("sync swap data: %v", hex.EncodeToString(data))
+	auth, err := c.GetTransactor(privateKey)
+
+	ammount1 := c.ConvertToken(TokenUSDC, ammount)
+	auth.Value = ammount1
+
+	steps := []abi.IRouterSwapStep{
+		{
+			Pool:         poolAddr,
+			Data:         data,
+			Callback:     common.HexToAddress(ZERO_ADDRESS),
+			CallbackData: []byte(""),
+		},
+	}
+	path := []abi.IRouterSwapPath{
+		{
+			Steps:    steps,
+			TokenIn:  common.HexToAddress(usdcAddr),
+			AmountIn: ammount1,
+		},
+	}
+	log.Infof("sync swap path: %+v", path)
+	deadline := time.Now().Add(20 * time.Minute).Unix()
+
+	tx, err := syncClient.Swap(auth, path, big.NewInt(0), big.NewInt(deadline))
+	if err != nil {
+		return "", errors.Wrap(err, "syncswap")
+	}
+	log.Infof("syncswap address: %v", tx.Hash().Hex())
+
+	return tx.Hash().Hex(), nil
+
 }
