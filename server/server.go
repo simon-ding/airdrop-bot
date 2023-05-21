@@ -58,6 +58,7 @@ func (s *Server) Serve() error {
 	{
 		app.POST("/muteio/swap/", HttpHandler(s.doMuteIoSwap))
 		app.POST("/cbridge/send", HttpHandler(s.cbridgeSend))
+		app.POST("/syncswap/swap", HttpHandler(s.doSyncSwap))
 	}
 	api.GET("/balance/:id", HttpHandler(s.getBalance))
 	api.POST("/bridge/orbiter", HttpHandler(s.orbiterBridge))

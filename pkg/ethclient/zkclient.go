@@ -5,7 +5,6 @@ import (
 	"airdrop-bot/pkg/abi"
 	"airdrop-bot/utils"
 	"bytes"
-	"context"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pkg/errors"
 	"github.com/zksync-sdk/zksync2-go"
 )
@@ -39,33 +37,6 @@ func (c *ZkClient) Connect() error {
 	c.provider = zp
 	log.Infof("connect to zksync era rpc success")
 	return nil
-}
-
-func (c *ZkClient) GetTransactor(privateKey string) (*bind.TransactOpts, error) {
-	gasPrice, err := c.client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	pkey, err := crypto.HexToECDSA(privateKey)
-	if err != nil {
-		return nil, err
-	}
-	chainId, err := c.client.ChainID(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	//log.Infof("chain id: %v", chainId)
-	auth, err := bind.NewKeyedTransactorWithChainID(pkey, chainId)
-	if err != nil {
-		return nil, err
-	}
-	// auth.Nonce = big.NewInt(10)
-	// auth.Value = big.NewInt(0)       // in wei
-	// auth.GasLimit = uint64(10000000) // in units
-	auth.GasPrice = gasPrice
-	//log.Infof("before transaction: %+v", auth)
-
-	return auth, nil
 }
 
 func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64) (string, error) {
@@ -116,7 +87,7 @@ func (c *ZkClient) MuteIoSwap(privateKey string, from, to Token, amount float64)
 
 	if from == TokenUSDC && to == TokenEth {
 
-		if err := c.ApproveTokenAllowance(TokenUSDC, privateKey, muteIOSwapContractAddress, c.GetTransactor); err != nil {
+		if err := c.ApproveTokenAllowance(TokenUSDC, privateKey, muteIOSwapContractAddress); err != nil {
 			return "", errors.Wrap(err, "approve allowance")
 		}
 
@@ -153,7 +124,6 @@ func (c *ZkClient) SyncSwapEth2Usdc(privateKey string, ammount *big.Float) (stri
 
 	wethAddr := GetContractAddress(ChainZkEra, TokenWETH)
 	usdcAddr := GetContractAddress(ChainZkEra, TokenUSDC)
-
 
 	classicPoolFact, err := abi.NewSyncSwapPoolFactory(common.HexToAddress(classicPoolFactoryAddr), c.client)
 	if err != nil {
@@ -227,7 +197,6 @@ func (c *ZkClient) SyncSwapEth2Usdc(privateKey string, ammount *big.Float) (stri
 	return tx.Hash().Hex(), nil
 }
 
-
 func (c *ZkClient) SyncSwapUsdc2Eth(privateKey string, ammount *big.Float) (string, error) {
 	const syncSwapContractAddress = "0x2da10A1e27bF85cEdD8FFb1AbBe97e53391C0295"
 	const classicPoolFactoryAddr = "0xf2DAd89f2788a8CD54625C60b55cD3d2D0ACa7Cb"
@@ -236,6 +205,9 @@ func (c *ZkClient) SyncSwapUsdc2Eth(privateKey string, ammount *big.Float) (stri
 	wethAddr := GetContractAddress(ChainZkEra, TokenWETH)
 	usdcAddr := GetContractAddress(ChainZkEra, TokenUSDC)
 
+	if err := c.ApproveTokenAllowance(TokenUSDC, privateKey, syncSwapContractAddress); err != nil {
+		return "", errors.Wrap(err, "approve allowance")
+	}
 
 	classicPoolFact, err := abi.NewSyncSwapPoolFactory(common.HexToAddress(classicPoolFactoryAddr), c.client)
 	if err != nil {
@@ -246,6 +218,7 @@ func (c *ZkClient) SyncSwapUsdc2Eth(privateKey string, ammount *big.Float) (stri
 		return "", errors.Wrap(err, "get pool")
 	}
 	log.Infof("pool addr: %v", poolAddr.Hex())
+
 	pool, err := abi.NewSyncSwapClassicPool(poolAddr, c.client)
 	if err != nil {
 		return "", errors.Wrap(err, "new pool")
@@ -278,9 +251,11 @@ func (c *ZkClient) SyncSwapUsdc2Eth(privateKey string, ammount *big.Float) (stri
 	data = append(data, modeBytes...)
 	log.Infof("sync swap data: %v", hex.EncodeToString(data))
 	auth, err := c.GetTransactor(privateKey)
+	if err != nil {
+		return "", errors.Wrap(err, "get auth")
+	}
 
 	ammount1 := c.ConvertToken(TokenUSDC, ammount)
-	auth.Value = ammount1
 
 	steps := []abi.IRouterSwapStep{
 		{

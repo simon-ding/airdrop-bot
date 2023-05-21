@@ -204,6 +204,9 @@ func (c *Client) ConvertToken(t Token, ammount *big.Float) *big.Int {
 }
 
 func (c *Client) GetTransactor(privateKey string) (*bind.TransactOpts, error) {
+	if (c.chain == ChainZkEra) {
+		return c.getZkTransactor(privateKey)
+	}
 	// publicKey := utils.GetPublicKeyFromPrivateKey(privateKey)
 	// nonce, err := c.client.PendingNonceAt(context.Background(), common.HexToAddress(publicKey))
 	// if err != nil {
@@ -241,7 +244,35 @@ func (c *Client) GetTransactor(privateKey string) (*bind.TransactOpts, error) {
 	return auth, nil
 }
 
-func (c *Client) ApproveTokenAllowance(t Token, ownerPrivateKey, spender string, getAuth func(string) (*bind.TransactOpts, error)) error {
+func (c *Client) getZkTransactor(privateKey string) (*bind.TransactOpts, error) {
+	gasPrice, err := c.client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	pkey, err := crypto.HexToECDSA(privateKey)
+	if err != nil {
+		return nil, err
+	}
+	chainId, err := c.client.ChainID(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	//log.Infof("chain id: %v", chainId)
+	auth, err := bind.NewKeyedTransactorWithChainID(pkey, chainId)
+	if err != nil {
+		return nil, err
+	}
+	// auth.Nonce = big.NewInt(10)
+	// auth.Value = big.NewInt(0)       // in wei
+	// auth.GasLimit = uint64(10000000) // in units
+	auth.GasPrice = gasPrice
+	//log.Infof("before transaction: %+v", auth)
+
+	return auth, nil
+}
+
+
+func (c *Client) ApproveTokenAllowance(t Token, ownerPrivateKey, spender string) error {
 	contractAddr := GetContractAddress(c.chain, t)
 	erc20, err := abi.NewErc20(common.HexToAddress(contractAddr), c.client)
 	if err != nil {
@@ -253,15 +284,21 @@ func (c *Client) ApproveTokenAllowance(t Token, ownerPrivateKey, spender string,
 	if err != nil {
 		return err
 	}
-	if al.Int64() != 0 {
-		log.Infof("already set allowance: %v", al)
+	bal1, err := erc20.BalanceOf(&bind.CallOpts{}, pubKey)
+	if err != nil {
+		return errors.Wrap(err, "get balance")
+	}
+
+	if al.Int64() >= bal1.Int64() {
+		log.Infof("already set allowance to max: %v", al)
 		return nil
 	}
 
-	auth, err := getAuth(ownerPrivateKey)
+	auth, err := c.GetTransactor(ownerPrivateKey)
 	if err != nil {
 		return err
 	}
+
 	bal, err := erc20.BalanceOf(&bind.CallOpts{}, pubKey)
 	if err != nil {
 		return errors.Wrap(err, "erc20 balance")
