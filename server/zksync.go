@@ -4,7 +4,10 @@ import (
 	"airdrop-bot/db"
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/ethclient"
+	"io/ioutil"
 	"math/big"
+	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -80,4 +83,27 @@ func (s *Server) doSyncSwap(c *gin.Context) (interface{}, error) {
 
 	return txHash, nil
 
+}
+
+func (s *Server) getTransaction(c *gin.Context) (interface{}, error) {
+	var apiUrl = "https://zksync2-mainnet-explorer.zksync.io/transactions?limit=1000&direction=older&accountAddress="
+
+	id := c.Param("id")
+	idd, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, err
+	}
+
+	ac := db.FindAccount(idd)
+
+	resp, err := http.Get(apiUrl + ac.Address)
+	if err != nil {
+		return nil, errors.Wrap(err, "http get")
+	}
+	defer resp.Body.Close()
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "read body")
+	}
+	return string(data), nil
 }
