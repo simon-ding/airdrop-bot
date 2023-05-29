@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/lightsail v1.26.6
 	github.com/chromedp/cdproto v0.0.0-20230220211738-2b1ec77315c9
 	github.com/chromedp/chromedp v0.9.1
-	github.com/ethereum/go-ethereum v1.11.6
+	github.com/ethereum/go-ethereum v1.12.0
 	github.com/gin-gonic/gin v1.9.0
 	github.com/huobirdcenter/huobi_golang v0.0.0-20210226095227-8a30a95b6d0d
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
