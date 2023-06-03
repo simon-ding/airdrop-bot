@@ -313,3 +313,18 @@ func (c *ZkClient) ZnsBuyDomain(domain string, privateKey string) (string, error
 
 	return tx.Hash().Hex(), nil
 }
+
+
+func (c *ZkClient) ZnsGetOwnedDomains(address string) ([]string, error) {
+	znsContractAddr := common.HexToAddress("0xCc788c0495894C01F01cD328CF637c7C441Ee69E")
+	znszks, err := abi.NewZksBaseRegisterImpl(znsContractAddr, c.client)
+	if err != nil {
+		return nil, errors.Wrap(err, "new zns zks")
+	}
+	_, domains, err := znszks.GetOwnedDomains(&bind.CallOpts{}, common.HexToAddress(address))
+	if err != nil {
+		return nil, errors.Wrap(err, "get domains")
+	}
+	log.Infof("get domains for address: %s, domains: %v", address, domains)
+	return domains, nil
+}

@@ -129,3 +129,23 @@ func (s *Server) ZnsBuyDomain(c *gin.Context) (interface{}, error) {
 	}
 	return tx, nil
 }
+
+
+func (s *Server) ZnsGetOwnedDomains(c *gin.Context) (interface{}, error) {
+	id := c.Param("id")
+	idd, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, err
+	}
+
+	ac := db.FindAccount(idd)
+
+	h := ethclient.NewZkClient()
+	h.Connect()
+
+	domains, err := h.ZnsGetOwnedDomains(ac.Address)
+	if err != nil {
+		return nil, errors.Wrap(err, "get domains")
+	}
+	return domains, nil	
+}
