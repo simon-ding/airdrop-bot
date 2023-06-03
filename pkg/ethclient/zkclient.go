@@ -284,3 +284,32 @@ func (c *ZkClient) SyncSwapUsdc2Eth(privateKey string, ammount *big.Float) (stri
 	return tx.Hash().Hex(), nil
 
 }
+
+func (c *ZkClient) ZnsBuyDomain(domain string, privateKey string) (string, error) {
+	znsContractAddr := common.HexToAddress("0xCBE2093030F485adAaf5b61deb4D9cA8ADEAE509")
+
+	pubKey := utils.GetPublicKey(privateKey)
+	znszks, err := abi.NewZksBaseRegister(znsContractAddr, c.client)
+	if err != nil {
+		return "", errors.Wrap(err, "new zns zks")
+	}
+	isAvailable, canMint, err := znszks.CanRegister(&bind.CallOpts{}, domain, common.HexToAddress(pubKey))
+	if err != nil {
+		return "", errors.Wrap(err, "can register")
+	}
+	if !isAvailable || !canMint {
+		return "", errors.New("You can not register this name at this moment: " + domain)
+	}
+	log.Infof("%s is available for register", domain)
+	auth, err := c.GetTransactor(privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	tx, err := znszks.Register(auth, domain, common.HexToAddress(pubKey), big.NewInt(1))
+	if err != nil {
+		return "", errors.Wrap(err, "")
+	}
+
+	return tx.Hash().Hex(), nil
+}

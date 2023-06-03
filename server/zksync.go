@@ -86,7 +86,7 @@ func (s *Server) doSyncSwap(c *gin.Context) (interface{}, error) {
 }
 
 func (s *Server) getTransaction(c *gin.Context) (interface{}, error) {
-	var apiUrl = "https://zksync2-mainnet-explorer.zksync.io/transactions?limit=100&direction=older&accountAddress="
+	var apiUrl = "https://zksync2-mainnet-explorer.zksync.io/transactions?limit=50&direction=older&accountAddress="
 
 	id := c.Param("id")
 	idd, err := strconv.Atoi(id)
@@ -106,4 +106,26 @@ func (s *Server) getTransaction(c *gin.Context) (interface{}, error) {
 		return nil, errors.Wrap(err, "read body")
 	}
 	return string(data), nil
+}
+
+type ZnsBuyDomain struct {
+	Account int    `json:"account"`
+	Domain  string `json:"domain"`
+}
+
+func (s *Server) ZnsBuyDomain(c *gin.Context) (interface{}, error) {
+	var in ZnsBuyDomain
+	if err := c.ShouldBindJSON(&in); err != nil {
+		return nil, errors.Wrap(err, "bind json")
+	}
+	ac := db.FindAccount(in.Account)
+
+	h := ethclient.NewZkClient()
+	h.Connect()
+
+	tx, err := h.ZnsBuyDomain(in.Domain, ac.PrivateKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "zns buy domain")
+	}
+	return tx, nil
 }

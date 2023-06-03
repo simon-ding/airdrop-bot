@@ -60,12 +60,13 @@ func (s *Server) Serve() error {
 		app.POST("/muteio/swap/", HttpHandler(s.doMuteIoSwap))
 		app.POST("/cbridge/send", HttpHandler(s.cbridgeSend))
 		app.POST("/syncswap/swap", HttpHandler(s.doSyncSwap))
+		app.POST("/znszks/buy", HttpHandler(s.ZnsBuyDomain))
 	}
 	api.GET("/balance/:id", HttpHandler(s.getBalance))
 	api.POST("/bridge/orbiter", HttpHandler(s.orbiterBridge))
 	api.GET("/address/all", HttpHandler(s.getAllAccounts))
 	api.POST("/address/gen/:num", HttpHandler(s.GenAccounts))
-	
+
 	return s.r.Run(":8080")
 }
 
@@ -169,10 +170,10 @@ func (s *Server) doOrbiterBridge(in orbiterInput) error {
 }
 
 type cbridgeSendInput struct {
-	DstChain string `json:"dst_chain"`
-	SrcChain string `json:"src_chain"`
-	Ammount float64 `json:"ammount"`
-	AccountID int `json:"account_id"`
+	DstChain  string  `json:"dst_chain"`
+	SrcChain  string  `json:"src_chain"`
+	Ammount   float64 `json:"ammount"`
+	AccountID int     `json:"account_id"`
 }
 
 func (s *Server) cbridgeSend(c *gin.Context) (interface{}, error) {
@@ -189,7 +190,7 @@ func (s *Server) cbridgeSend(c *gin.Context) (interface{}, error) {
 
 	src := ethclient.GetChain(req.SrcChain)
 	dst := ethclient.GetChain(req.DstChain)
-	
+
 	h := ethclient.GetHandler(src)
 	h.Connect()
 	tx, err := h.CBridgeSend(dst, ac.PrivateKey, req.Ammount)
