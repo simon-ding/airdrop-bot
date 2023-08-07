@@ -18,7 +18,7 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/zksync-sdk/zksync2-go v0.1.1
 	go.uber.org/zap v1.24.0
-	golang.org/x/text v0.9.0
+	golang.org/x/text v0.12.0
 )
 
 require (
