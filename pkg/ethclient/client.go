@@ -38,6 +38,7 @@ func (c *Client) Connect() error {
 		return fmt.Errorf("connect to endpoint error: %v", err)
 	}
 	c.client = client
+	log.Infof("connect to network success %v", c.chain)
 	return nil
 }
 
