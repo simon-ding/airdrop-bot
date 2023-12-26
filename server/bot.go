@@ -135,14 +135,14 @@ func (s *Server) getGasPrices(c *gin.Context) (interface{}, error)  {
 	c3.Connect()
 	p3 := c3.GasPrice()
 
-	c4 := ethclient.NewArbNovaClient()
-	c4.Connect()
-	p4 := c4.GasPrice()
+	// c4 := ethclient.NewArbNovaClient()
+	// c4.Connect()
+	// p4 := c4.GasPrice()
 
 	return map[string]string {
 		ethclient.ChainEthMain.String(): p1.Text('g', 3),
 		ethclient.ChainArbOne.String(): p2.Text('g', 3),
 		ethclient.ChainZkEra.String(): p3.Text('g', 3),
-		ethclient.ChainArbNova.String(): p4.Text('g', 3),
+		//ethclient.ChainArbNova.String(): p4.Text('g', 3),
 	}, nil
 }
