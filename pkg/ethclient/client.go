@@ -27,7 +27,7 @@ func NewClient(chain Chain) *Client {
 
 type Client struct {
 	chain  Chain
-	client *ethclient.Client
+	client EthereumClient
 }
 
 func (c *Client) Connect() error {
@@ -394,4 +394,89 @@ func (c *Client) EstimatedGas() {
 		To:   &addr,
 	})
 	log.Infof("estimated: %v, %v", f, err)
+}
+
+
+type EthereumClient interface {
+	// Close closes the underlying RPC connection.
+	Close()
+
+	// ChainID retrieves the current chain ID for transaction replay protection.
+	ChainID(ctx context.Context) (*big.Int, error)
+	// BlockNumber returns the most recent block number
+	BlockNumber(ctx context.Context) (uint64, error)
+	// PeerCount returns the number of p2p peers as reported by the net_peerCount method
+	PeerCount(ctx context.Context) (uint64, error)
+	// HeaderByHash returns the block header with the given hash.
+	HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error)
+	// HeaderByNumber returns a block header from the current canonical chain. If number is
+	// nil, the latest known header is returned.
+	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
+	// TransactionCount returns the total number of transactions in the given block.
+	TransactionCount(ctx context.Context, blockHash common.Hash) (uint, error)
+	// SyncProgress retrieves the current progress of the sync algorithm. If there's
+	// no sync currently running, it returns nil.
+	SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error)
+	// SubscribeNewHead subscribes to notifications about the current blockchain head
+	// on the given channel.
+	SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error)
+
+	// NetworkID returns the network ID for this client.
+	NetworkID(ctx context.Context) (*big.Int, error)
+	// BalanceAt returns the wei balance of the given account.
+	// The block number can be nil, in which case the balance is taken from the latest known block.
+	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error)
+	// StorageAt returns the value of key in the contract storage of the given account.
+	// The block number can be nil, in which case the value is taken from the latest known block.
+	StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error)
+	// CodeAt returns the contract code of the given account.
+	// The block number can be nil, in which case the code is taken from the latest known block.
+	CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error)
+	// NonceAt returns the account nonce of the given account.
+	// The block number can be nil, in which case the nonce is taken from the latest known block.
+	NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error)
+
+	// FilterLogs performs the same function as FilterLogsL2, and that method should be used instead.
+	// This method is designed to be compatible with bind.ContractBackend.
+	FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error)
+	// SubscribeFilterLogs performs the same function as SubscribeFilterLogsL2, and that method should be used instead.
+	// This method is designed to be compatible with bind.ContractBackend.
+	SubscribeFilterLogs(ctx context.Context, query ethereum.FilterQuery, ch chan<- types.Log) (ethereum.Subscription, error)
+
+	// PendingBalanceAt returns the wei balance of the given account in the pending state.
+	PendingBalanceAt(ctx context.Context, account common.Address) (*big.Int, error)
+	// PendingStorageAt returns the value of key in the contract storage of the given account in the pending state.
+	PendingStorageAt(ctx context.Context, account common.Address, key common.Hash) ([]byte, error)
+	// PendingCodeAt returns the contract code of the given account in the pending state.
+	PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error)
+	// PendingNonceAt returns the account nonce of the given account in the pending state.
+	// This is the nonce that should be used for the next transaction.
+	PendingNonceAt(ctx context.Context, account common.Address) (uint64, error)
+	// PendingTransactionCount returns the total number of transactions in the pending state.
+	PendingTransactionCount(ctx context.Context) (uint, error)
+
+	// CallContract executes a message call transaction, which is directly executed in the VM
+	// of the node, but never mined into the blockchain.
+	//
+	// blockNumber selects the block height at which the call runs. It can be nil, in which
+	// case the code is taken from the latest known block. Note that state from very old
+	// blocks might not be available.
+	CallContract(ctx context.Context, msg ethereum.CallMsg, blockNumber *big.Int) ([]byte, error)
+	// SuggestGasPrice retrieves the currently suggested gas price to allow a timely
+	// execution of a transaction.
+	SuggestGasPrice(ctx context.Context) (*big.Int, error)
+	// SuggestGasTipCap retrieves the currently suggested gas tip cap after 1559 to
+	// allow a timely execution of a transaction.
+	SuggestGasTipCap(ctx context.Context) (*big.Int, error)
+	// EstimateGas tries to estimate the gas needed to execute a transaction based on
+	// the current pending state of the backend blockchain. There is no guarantee that this is
+	// the true gas limit requirement as other transactions may be added or removed by miners,
+	// but it should provide a basis for setting a reasonable default.
+	EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64, error)
+	// SendTransaction injects a signed transaction into the pending pool for execution.
+	//
+	// If the transaction was a contract creation use the TransactionReceipt method to get the
+	// contract address after the transaction has been mined.
+	SendTransaction(ctx context.Context, tx *types.Transaction) error
+
 }

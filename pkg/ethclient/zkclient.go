@@ -15,8 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/zksync-sdk/zksync2-go"
 	"github.com/zksync-sdk/zksync2-go/accounts"
+	"github.com/zksync-sdk/zksync2-go/clients"
 )
 
 func NewZkClient() *ZkClient {
@@ -25,18 +25,17 @@ func NewZkClient() *ZkClient {
 
 type ZkClient struct {
 	*Client
-	provider zksync2.Provider
 }
 
 func (c *ZkClient) Connect() error {
 	// also, init ZkSync Provider, specify ZkSync2 RPC URL (e.g. testnet)
 	//zp, err := zksync2.NewDefaultProvider("https://zksync-era.rpc.thirdweb.com/ed043a51ae23b0db3873f5a38b77ab28175fa496f15d3c53cf70401be89b622a")
-	zp, err := zksync2.NewDefaultProvider("https://mainnet.era.zksync.io")
+
+	cl, err := clients.Dial("https://mainnet.era.zksync.io")
 	if err != nil {
 		return fmt.Errorf("coonect to zksync network: %v", err)
 	}
-	c.Client.client = zp.GetClient()
-	c.provider = zp
+	c.Client.client = cl
 	log.Infof("connect to zksync era rpc success")
 	return nil
 }
@@ -331,8 +330,9 @@ func (c *ZkClient) ZnsGetOwnedDomains(address string) ([]string, error) {
 }
 
 func (c *ZkClient) DeploySimpleStorageContract(priKey string) (string, error) {
+	cl, _ := c.client.(clients.Client)
 	// Create wallet
-	wallet, err := accounts.NewWallet(common.Hex2Bytes(priKey), &c.provider, nil)
+	wallet, err := accounts.NewWallet(common.Hex2Bytes(priKey), &cl, nil)
 	if err != nil {
 		log.Panic(err)
 	}
