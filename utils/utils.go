@@ -20,7 +20,6 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
@@ -66,13 +65,14 @@ func NewMnemonic128() (string, error) {
 }
 
 func NewEthAccount() (string, string, string) {
-	mnemonic, _ := hdwallet.NewMnemonic(128)
-	wallet, _ := hdwallet.NewFromMnemonic(mnemonic)
+	panic("not implemented")
+	// mnemonic, _ := hdwallet.NewMnemonic(128)
+	// wallet, _ := hdwallet.NewFromMnemonic(mnemonic)
 
-	path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0/0")
-	account, _ := wallet.Derive(path, false)
-	PriKey, _ := wallet.PrivateKeyHex(account)
-	return mnemonic, account.Address.Hex(), PriKey
+	// path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0/0")
+	// account, _ := wallet.Derive(path, false)
+	// PriKey, _ := wallet.PrivateKeyHex(account)
+	// return mnemonic, account.Address.Hex(), PriKey
 }
 
 func OpenChanListAndAddNetwork(ctx context.Context, networkName string, meta *metamask.Metamask) error {
