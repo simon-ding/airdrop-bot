@@ -435,5 +435,5 @@ func (c *Client) DeploySimpleStorageContract(priKey string) (string, error) {
 	}
 
 	log.Infof("tx : %v", tx.Hash().Hex())
-	return addr.Hex(), nil
+	return tx.Hash().Hex(), nil
 }
