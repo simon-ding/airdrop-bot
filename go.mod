@@ -2,8 +2,6 @@ module airdrop-bot
 
 go 1.21
 
-toolchain go1.21.7
-
 require (
 	entgo.io/ent v0.12.3
 	github.com/adshao/go-binance/v2 v2.4.2
