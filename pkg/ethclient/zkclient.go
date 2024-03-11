@@ -343,5 +343,5 @@ func (c *ZkClient) DeploySimpleStorageContract(priKey string) (string, error) {
 		panic(err)
 	}
 	fmt.Println("Transaction: ", hash)
-	return hash.Hash(), nil
+	return hash.Hex(), nil
 }
