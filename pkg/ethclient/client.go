@@ -3,7 +3,6 @@ package ethclient
 import (
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/abi"
-	"airdrop-bot/pkg/contracts/storage"
 	"airdrop-bot/utils"
 	"context"
 	"crypto/ecdsa"
@@ -206,7 +205,7 @@ func (c *Client) ConvertToken(t Token, ammount *big.Float) *big.Int {
 }
 
 func (c *Client) GetTransactor(privateKey string) (*bind.TransactOpts, error) {
-	if (c.chain == ChainZkEra) {
+	if c.chain == ChainZkEra {
 		return c.getZkTransactor(privateKey)
 	}
 	// publicKey := utils.GetPublicKeyFromPrivateKey(privateKey)
@@ -272,7 +271,6 @@ func (c *Client) getZkTransactor(privateKey string) (*bind.TransactOpts, error) 
 
 	return auth, nil
 }
-
 
 func (c *Client) ApproveTokenAllowance(t Token, ownerPrivateKey, spender string) error {
 	contractAddr := GetContractAddress(c.chain, t)
@@ -388,52 +386,12 @@ func (c *Client) CBridgeSend(dst Chain, privateKey string, ammount float64) (str
 	return tx.Hash().Hex(), nil
 }
 
-
 func (c *Client) EstimatedGas() {
 	addr := common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 	f, err := c.client.EstimateGas(context.Background(), ethereum.CallMsg{
 		From: addr,
-		To: &addr,
+		To:   &addr,
 	})
 	log.Infof("estimated: %v, %v", f, err)
-}
-
-func (c *Client) DeploySimpleStorageContract(priKey string) (string, error) {
-	privateKey, err := crypto.HexToECDSA(priKey)
-	if err != nil {
-		return "", err
-	}
-
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return "", fmt.Errorf("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
-	}
-
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	nonce, err := c.client.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		return "", err
-	}
-
-	gasPrice, err := c.client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return "", err
-	}
-	chanid, _ := c.client.ChainID(context.Background())
-
-	auth, _ := bind.NewKeyedTransactorWithChainID(privateKey, chanid)
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0)     // in wei
-	auth.GasLimit = uint64(300000) // in units
-	auth.GasPrice = gasPrice
-
-	addr, tx, _, err := storage.DeployStorage(auth, c.client)
-	if err != nil {
-		return "", fmt.Errorf("deploy contract: %v", err)
-	}
-	log.Infof("contract address: %v", addr.Hex())
-	log.Infof("tx : %v", tx.Hash().Hex())
-	return tx.Hash().Hex(), nil
 }

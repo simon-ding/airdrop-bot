@@ -3,6 +3,7 @@ package ethclient
 import (
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/abi"
+	"airdrop-bot/pkg/contracts/storage"
 	"airdrop-bot/utils"
 	"bytes"
 	"encoding/binary"
@@ -15,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/zksync-sdk/zksync2-go"
+	"github.com/zksync-sdk/zksync2-go/accounts"
 )
 
 func NewZkClient() *ZkClient {
@@ -314,7 +316,6 @@ func (c *ZkClient) ZnsBuyDomain(domain string, privateKey string) (string, error
 	return tx.Hash().Hex(), nil
 }
 
-
 func (c *ZkClient) ZnsGetOwnedDomains(address string) ([]string, error) {
 	znsContractAddr := common.HexToAddress("0xCc788c0495894C01F01cD328CF637c7C441Ee69E")
 	znszks, err := abi.NewZksBaseRegisterImpl(znsContractAddr, c.client)
@@ -327,4 +328,20 @@ func (c *ZkClient) ZnsGetOwnedDomains(address string) ([]string, error) {
 	}
 	log.Infof("get domains for address: %s, domains: %v", address, domains)
 	return domains, nil
+}
+
+func (c *ZkClient) DeploySimpleStorageContract(priKey string) (string, error) {
+	// Create wallet
+	wallet, err := accounts.NewWallet(common.Hex2Bytes(priKey), &c.provider, nil)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	// Deploy smart contract
+	hash, err := wallet.DeployWithCreate(nil, accounts.CreateTransaction{Bytecode: storage.StorageBinData})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Transaction: ", hash)
+	return hash.Hash(), nil
 }
