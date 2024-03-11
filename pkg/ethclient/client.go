@@ -3,6 +3,7 @@ package ethclient
 import (
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/abi"
+	"airdrop-bot/pkg/contracts/storage"
 	"airdrop-bot/utils"
 	"context"
 	"crypto/ecdsa"
@@ -398,27 +399,27 @@ func (c *Client) EstimatedGas() {
 	log.Infof("estimated: %v, %v", f, err)
 }
 
-func (c *Client) DeploySimpleStorageContract(privateKey string) () {
-	privateKey, err := crypto.HexToECDSA(privateKey)
+func (c *Client) DeploySimpleStorageContract(priKey string) (string, error) {
+	privateKey, err := crypto.HexToECDSA(priKey)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		log.Fatal("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
+		return "", fmt.Errorf("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
 	}
 
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+	nonce, err := c.client.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
-	gasPrice, err := client.SuggestGasPrice(context.Background())
+	gasPrice, err := c.client.SuggestGasPrice(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 	chanid, _ := c.client.ChainID(context.Background())
 
@@ -428,4 +429,11 @@ func (c *Client) DeploySimpleStorageContract(privateKey string) () {
 	auth.GasLimit = uint64(300000) // in units
 	auth.GasPrice = gasPrice
 
+	addr, tx, _, err := storage.DeployStorage(auth, c.client)
+	if err != nil {
+		return "", fmt.Errorf("deploy contract: %v", err)
+	}
+
+	log.Infof("tx : %v", tx.Hash().Hex())
+	return addr.Hex(), nil
 }
