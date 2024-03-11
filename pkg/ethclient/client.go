@@ -433,7 +433,7 @@ func (c *Client) DeploySimpleStorageContract(priKey string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("deploy contract: %v", err)
 	}
-
+	log.Infof("contract address: %v", addr.Hex())
 	log.Infof("tx : %v", tx.Hash().Hex())
 	return tx.Hash().Hex(), nil
 }
