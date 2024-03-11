@@ -62,6 +62,7 @@ func (s *Server) Serve() error {
 		app.POST("/syncswap/swap", HttpHandler(s.doSyncSwap))
 		app.POST("/znszks/buy", HttpHandler(s.ZnsBuyDomain))
 		app.GET("/znszks/domains/:id", HttpHandler(s.ZnsGetOwnedDomains))
+		app.POST("/contract/deploy/:id", HttpHandler(s.DeploySimpleStorageContract2Zksync))
 	}
 	api.GET("/balance/:id", HttpHandler(s.getBalance))
 	api.POST("/bridge/orbiter", HttpHandler(s.orbiterBridge))

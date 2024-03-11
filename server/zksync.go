@@ -149,3 +149,18 @@ func (s *Server) ZnsGetOwnedDomains(c *gin.Context) (interface{}, error) {
 	}
 	return domains, nil	
 }
+
+func (s *Server) DeploySimpleStorageContract2Zksync(c *gin.Context) (interface{}, error) {
+	id := c.Param("id")
+	idd, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, err
+	}
+
+	ac := db.FindAccount(idd)
+
+	h := ethclient.NewZkClient()
+	h.Connect()
+
+	return h.DeploySimpleStorageContract(ac.PrivateKey)
+}
