@@ -44,7 +44,6 @@ type AWS struct {
 
 type Cloudflare struct {
 	ApiKey    string `mapstructure:"apiKey"`
-	ZoneId    string `mapstructure:"zoneId"`
 	KvId      string `mapstructure:"kvId"`
 	AccountId string `mapstructure:"accountId"`
 }

@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/lightsail v1.28.4
 	github.com/chromedp/cdproto v0.0.0-20230220211738-2b1ec77315c9
 	github.com/chromedp/chromedp v0.9.1
+	github.com/cloudflare/cloudflare-go v0.79.0
 	github.com/ethereum/go-ethereum v1.13.13
 	github.com/gin-gonic/gin v1.9.0
 	github.com/huobirdcenter/huobi_golang v0.0.0-20210226095227-8a30a95b6d0d
@@ -69,8 +70,11 @@ require (
 	github.com/gobwas/ws v1.1.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.13.0 // indirect
 	github.com/holiman/uint256 v1.2.4 // indirect
@@ -110,6 +114,7 @@ require (
 	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.18.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
