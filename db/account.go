@@ -78,6 +78,10 @@ func (c *Client) AddAccount(a Account) error {
 	return c.writeAllAccounts(accountsAll)
 }
 
+func (c *Client) BatchAddAccounts(accounts []Account) error {
+	return c.writeAllAccounts(accounts)
+}
+
 func (c *Client) DeleteAccount(a Account) error {
 	accountsAll := c.GetAllAccounts()
 

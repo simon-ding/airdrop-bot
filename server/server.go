@@ -100,6 +100,7 @@ func (s *Server) migrate() {
 		log.Errorf("create client: %v", err)
 		return
 	}
+	var newAccounts []db.Account
 	for _, a := range accounts {
 		account := db.Account{
 			ID:         a.ID,
@@ -108,10 +109,11 @@ func (s *Server) migrate() {
 			PrivateKey: a.PrivateKey,
 		}
 		log.Infof("migrate account: %v", a.ID)
-		err := cl.AddAccount(account)
-		if err != nil {
-			log.Errorf("add account: %v", err)
-		}
+		newAccounts = append(newAccounts, account)
+	}
+	err = cl.BatchAddAccounts(newAccounts)
+	if err != nil {
+		log.Errorf("batch add accounts: %v", err)
 	}
 	err = cl.SaveBinanceSetting(db.BinanceSetting{
 		Key:    key,
