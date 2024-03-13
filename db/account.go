@@ -70,8 +70,10 @@ func (c *Client) AddAccount(a Account) error {
 			return fmt.Errorf("account with same address already exist: %v", ori)
 		}
 	}
-	maxId := accountsAll[len(accountsAll)-1].ID
-	a.ID = maxId + 1
+	if len(accountsAll) > 0 {
+		maxId := accountsAll[len(accountsAll)-1].ID
+		a.ID = maxId + 1
+	}
 	accountsAll = append(accountsAll, a)
 	return c.writeAllAccounts(accountsAll)
 }
