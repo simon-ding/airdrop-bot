@@ -107,6 +107,7 @@ func (s *Server) migrate() {
 			Address:    a.Address,
 			PrivateKey: a.PrivateKey,
 		}
+		log.Infof("migrate account: %v", a.ID)
 		err := cl.AddAccount(account)
 		if err != nil {
 			log.Errorf("add account: %v", err)
