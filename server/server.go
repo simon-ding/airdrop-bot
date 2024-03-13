@@ -32,6 +32,7 @@ type Server struct {
 
 func (s *Server) Serve() error {
 	s.initBinance()
+	s.migrate()
 	s.r.Use(func(c *gin.Context) {
 		token := c.GetHeader(cfg.AuthHeader)
 		if token != s.cfg.Token {
@@ -88,6 +89,35 @@ func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
 		})
 	}
 	return m, nil
+}
+
+func (s *Server) migrate() {
+	accounts := db.FetchAllAccounts()
+	key, secret := db.GetBinanceKeySecret()
+	cl, err := db.NewClient(&s.cfg.Cloudflare)
+	if err != nil {
+		log.Errorf("create client: %v", err)
+		return
+	}
+	for _, a := range accounts {
+		account := db.Account{
+			ID:         a.ID,
+			Mnemonic:   a.Mnemonic,
+			Address:    a.Address,
+			PrivateKey: a.PrivateKey,
+		}
+		err := cl.AddAccount(account)
+		if err != nil {
+			log.Errorf("add account: %v", err)
+		}
+	}
+	err = cl.SaveBinanceSetting(db.BinanceSetting{
+		Key:    key,
+		Secret: secret,
+	})
+	if err != nil {
+		log.Errorf("binance setting: %v", err)
+	}
 }
 
 func (s *Server) getBalance(c *gin.Context) (interface{}, error) {

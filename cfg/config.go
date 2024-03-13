@@ -16,10 +16,11 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	GasFeeAcceptable int     `mapstructure:"gasFeeAcceptable"`
-	Token            string  `mapstructure:"token"`
-	DbFile           string  `mapstructure:"dbFile"`
-	Binance          Binance `mapstructure:"binance"`
+	GasFeeAcceptable int        `mapstructure:"gasFeeAcceptable"`
+	Token            string     `mapstructure:"token"`
+	DbFile           string     `mapstructure:"dbFile"`
+	Binance          Binance    `mapstructure:"binance"`
+	Cloudflare       Cloudflare `mapstructure:"cloudflare"`
 }
 
 type NodeConfig struct {
