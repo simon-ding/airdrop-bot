@@ -2,7 +2,6 @@ package main
 
 import (
 	"airdrop-bot/cfg"
-	"airdrop-bot/db"
 	"airdrop-bot/log"
 
 	"airdrop-bot/server"
