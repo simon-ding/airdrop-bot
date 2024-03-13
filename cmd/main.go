@@ -16,9 +16,6 @@ func main() {
 	}
 	log.Info("read config success")
 
-	db.Open(cfg1.Server.DbFile)
-	log.Infof("db open success")
-
 	server, err := server.NewServer(&cfg1.Server)
 	if err != nil {
 		log.Errorf("server error: %v", err)

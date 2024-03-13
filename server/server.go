@@ -21,10 +21,15 @@ func NewServer(cfg *cfg.ServerConfig) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	bn := cl.GetBinanceSetting()
+	client := binance.New(bn.Key, bn.Secret)
+
 	return &Server{
 		cfg: cfg,
 		r:   r,
 		db:  cl,
+		bn: client,
 	}, nil
 }
 
@@ -37,8 +42,6 @@ type Server struct {
 }
 
 func (s *Server) Serve() error {
-	s.initBinance()
-
 	s.r.Use(func(c *gin.Context) {
 		token := c.GetHeader(cfg.AuthHeader)
 		if token != s.cfg.Token {
@@ -77,12 +80,6 @@ func (s *Server) Serve() error {
 	api.POST("/address/gen/:num", HttpHandler(s.GenAccounts))
 
 	return s.r.Run(":8080")
-}
-
-func (s *Server) initBinance() {
-	bn := s.db.GetBinanceSetting()
-	client := binance.New(bn.Key, bn.Secret)
-	s.bn = client
 }
 
 func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
