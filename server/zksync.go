@@ -1,7 +1,6 @@
 package server
 
 import (
-	"airdrop-bot/db"
 	"airdrop-bot/log"
 	"airdrop-bot/pkg/ethclient"
 	"io/ioutil"
@@ -24,7 +23,7 @@ func (s *Server) doMuteIoSwap(c *gin.Context) (interface{}, error) {
 	if err := c.ShouldBindJSON(&in); err != nil {
 		return nil, errors.Wrap(err, "bind json")
 	}
-	ac := db.FindAccount(in.ID)
+	ac := s.db.GetAccount(in.ID)
 
 	h := ethclient.NewZkClient()
 	h.Connect()
@@ -56,7 +55,7 @@ func (s *Server) doSyncSwap(c *gin.Context) (interface{}, error) {
 	if err := c.ShouldBindJSON(&in); err != nil {
 		return nil, errors.Wrap(err, "bind json")
 	}
-	ac := db.FindAccount(in.ID)
+	ac := s.db.GetAccount(in.ID)
 
 	h := ethclient.NewZkClient()
 	h.Connect()
@@ -94,7 +93,7 @@ func (s *Server) getTransaction(c *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	ac := db.FindAccount(idd)
+	ac := s.db.GetAccount(idd)
 
 	resp, err := http.Get(apiUrl + ac.Address)
 	if err != nil {
@@ -118,7 +117,7 @@ func (s *Server) ZnsBuyDomain(c *gin.Context) (interface{}, error) {
 	if err := c.ShouldBindJSON(&in); err != nil {
 		return nil, errors.Wrap(err, "bind json")
 	}
-	ac := db.FindAccount(in.Account)
+	ac := s.db.GetAccount(in.Account)
 
 	h := ethclient.NewZkClient()
 	h.Connect()
@@ -130,7 +129,6 @@ func (s *Server) ZnsBuyDomain(c *gin.Context) (interface{}, error) {
 	return tx, nil
 }
 
-
 func (s *Server) ZnsGetOwnedDomains(c *gin.Context) (interface{}, error) {
 	id := c.Param("id")
 	idd, err := strconv.Atoi(id)
@@ -138,7 +136,7 @@ func (s *Server) ZnsGetOwnedDomains(c *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	ac := db.FindAccount(idd)
+	ac := s.db.GetAccount(idd)
 
 	h := ethclient.NewZkClient()
 	h.Connect()
@@ -147,7 +145,7 @@ func (s *Server) ZnsGetOwnedDomains(c *gin.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "get domains")
 	}
-	return domains, nil	
+	return domains, nil
 }
 
 func (s *Server) DeploySimpleStorageContract2Zksync(c *gin.Context) (interface{}, error) {
@@ -157,7 +155,7 @@ func (s *Server) DeploySimpleStorageContract2Zksync(c *gin.Context) (interface{}
 		return nil, err
 	}
 
-	ac := db.FindAccount(idd)
+	ac := s.db.GetAccount(idd)
 
 	h := ethclient.NewZkClient()
 	h.Connect()

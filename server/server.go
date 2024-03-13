@@ -17,9 +17,14 @@ import (
 
 func NewServer(cfg *cfg.ServerConfig) (*Server, error) {
 	r := gin.New()
+	cl, err := db.NewClient(&cfg.Cloudflare)
+	if err != nil {
+		return nil, err
+	}
 	return &Server{
 		cfg: cfg,
 		r:   r,
+		db:  cl,
 	}, nil
 }
 
@@ -28,11 +33,12 @@ type Server struct {
 
 	r  *gin.Engine
 	bn *binance.Binance
+	db *db.Client
 }
 
 func (s *Server) Serve() error {
 	s.initBinance()
-	s.migrate()
+
 	s.r.Use(func(c *gin.Context) {
 		token := c.GetHeader(cfg.AuthHeader)
 		if token != s.cfg.Token {
@@ -46,8 +52,8 @@ func (s *Server) Serve() error {
 	api := s.r.Group("/api/v1")
 	bot := api.Group("/bot")
 	{
-		bot.GET("/settings", HttpHandler(s.GetAllKeyValues))
-		bot.POST("/settings", HttpHandler(s.SetKeyValue))
+		//bot.GET("/settings", HttpHandler(s.GetAllKeyValues))
+		//bot.POST("/settings", HttpHandler(s.SetKeyValue))
 		bot.GET("/gasprice", HttpHandler(s.getGasPrices))
 		bot.GET("/transactions/:id", HttpHandler(s.getTransaction))
 	}
@@ -74,13 +80,13 @@ func (s *Server) Serve() error {
 }
 
 func (s *Server) initBinance() {
-	key, secret := db.GetBinanceKeySecret()
-	client := binance.New(key, secret)
+	bn := s.db.GetBinanceSetting()
+	client := binance.New(bn.Key, bn.Secret)
 	s.bn = client
 }
 
 func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
-	accounts := db.FetchAllAccounts()
+	accounts := s.db.GetAllAccounts()
 	var m = make([]gin.H, 0, len(accounts))
 	for _, a := range accounts {
 		m = append(m, gin.H{
@@ -90,48 +96,13 @@ func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
 	}
 	return m, nil
 }
-
-func (s *Server) migrate() {
-	log.Infof("start db migrating")
-	accounts := db.FetchAllAccounts()
-	key, secret := db.GetBinanceKeySecret()
-	cl, err := db.NewClient(&s.cfg.Cloudflare)
-	if err != nil {
-		log.Errorf("create client: %v", err)
-		return
-	}
-	var newAccounts []db.Account
-	for _, a := range accounts {
-		account := db.Account{
-			ID:         a.ID,
-			Mnemonic:   a.Mnemonic,
-			Address:    a.Address,
-			PrivateKey: a.PrivateKey,
-		}
-		log.Infof("migrate account: %v", a.ID)
-		newAccounts = append(newAccounts, account)
-	}
-	err = cl.BatchAddAccounts(newAccounts)
-	if err != nil {
-		log.Errorf("batch add accounts: %v", err)
-	}
-	err = cl.SaveBinanceSetting(db.BinanceSetting{
-		Key:    key,
-		Secret: secret,
-	})
-	if err != nil {
-		log.Errorf("binance setting: %v", err)
-	}
-	log.Info("db migrating end")
-}
-
 func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
 	id := c.Param("id")
 	idd, err := strconv.Atoi(id)
 	if err != nil {
 		return nil, err
 	}
-	ac := db.FindAccount(idd)
+	ac := s.db.GetAccount(idd)
 	log.Infof("query account: %v	", ac.Address)
 
 	chains := []ethclient.Chain{
@@ -194,7 +165,7 @@ func (s *Server) orbiterBridge(c *gin.Context) (interface{}, error) {
 func (s *Server) doOrbiterBridge(in orbiterInput) error {
 	toChain := ethclient.GetChain(in.ToChain)
 	fromChain := ethclient.GetChain(in.FromChain)
-	ac := db.FindAccount(in.Account)
+	ac := s.db.GetAccount(in.Account)
 	log.Infof("query account: %v", ac.Address)
 
 	hander := ethclient.GetHandler(fromChain)
@@ -219,7 +190,7 @@ func (s *Server) cbridgeSend(c *gin.Context) (interface{}, error) {
 		return nil, errors.Wrap(err, "bind json")
 	}
 
-	ac := db.FindAccount(req.AccountID)
+	ac := s.db.GetAccount(req.AccountID)
 	log.Infof("query account: %v	", ac.Address)
 	if ac.Address == "" {
 		return nil, errors.Errorf("no such account: %v", ac.ID)
