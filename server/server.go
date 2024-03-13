@@ -92,6 +92,7 @@ func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
 }
 
 func (s *Server) migrate() {
+	log.Infof("start db migrating")
 	accounts := db.FetchAllAccounts()
 	key, secret := db.GetBinanceKeySecret()
 	cl, err := db.NewClient(&s.cfg.Cloudflare)
@@ -118,6 +119,7 @@ func (s *Server) migrate() {
 	if err != nil {
 		log.Errorf("binance setting: %v", err)
 	}
+	log.Info("db migrating end")
 }
 
 func (s *Server) getBalance(c *gin.Context) (interface{}, error) {
