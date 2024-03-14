@@ -46,3 +46,30 @@ func (c *Client) Put(key string, value []byte) error {
 	})
 	return err
 }
+
+func (c *Client) ListAllKeys(prefix string) []string {
+	resp, err := c.api.ListWorkersKVKeys(context.Background(), cloudflare.AccountIdentifier(c.cfg.AccountId), cloudflare.ListWorkersKVsParams{
+		NamespaceID: c.cfg.KvId,
+		Prefix:      prefix,
+	})
+	if err != nil {
+		log.Errorf("get kv keys: %v", err)
+		return nil
+	}
+	var keys []string
+	for _, v := range resp.Result {
+		keys = append(keys, v.Name)
+	}
+	return keys
+}
+
+func (c *Client) GetByPrefix(prefix string) [][]byte {
+	keys := c.ListAllKeys(prefix)
+
+	var res [][]byte
+	for _, k := range keys {
+		v := c.Get(k)
+		res = append(res, v)
+	}
+	return res
+}

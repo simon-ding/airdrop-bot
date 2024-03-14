@@ -4,6 +4,8 @@ import (
 	"airdrop-bot/log"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
 )
 
 type Account struct {
@@ -19,7 +21,7 @@ type Account struct {
 
 const accountsKey = "accounts"
 
-func (c *Client) GetAllAccounts() []Account {
+func (c *Client) GetAllAccountsOld() []Account {
 	v := c.cf.Get(accountsKey)
 	if v == nil {
 		log.Errorf("no account find")
@@ -34,32 +36,47 @@ func (c *Client) GetAllAccounts() []Account {
 	return accounts
 }
 
-func (c *Client) writeAllAccounts(accounts []Account) error {
-	return c.putValue(accountsKey, accounts)
+const accountPrefix = "account_"
+
+func (c *Client) GetAllAccounts() []Account {
+	v := c.cf.GetByPrefix(accountPrefix)
+	if v == nil {
+		log.Errorf("no account find")
+		return nil
+	}
+	var accounts []Account
+	for _, v1 := range v {
+		var a Account
+		err := json.Unmarshal(v1, &a)
+		if err != nil {
+			log.Errorf("unmarshalling data error, data : %v, error: %v", string(v1), err)
+			return nil
+		}
+		accounts = append(accounts, a)
+	}
+
+	sort.Slice(accounts, func(i, j int) bool {
+		return accounts[i].ID < accounts[j].ID
+	})
+	return accounts
+}
+
+func (c *Client) writeAccount(a Account) error {
+	if a.ID == 0 || a.Address == "" || a.Mnemonic == "" || a.PrivateKey == "" {
+		return fmt.Errorf("account should no empty field")
+	}
+	key := accountPrefix + strconv.Itoa(a.ID)
+	return c.putValue(key, a)
 }
 
 // update by id
 func (c *Client) UpdateAccount(a Account) error {
-	accountsAll := c.GetAllAccounts()
-	var found = false
-	for i, ori := range accountsAll {
-		if ori.ID == a.ID {
-			found = true
-			if a.Mnemonic != "" {
-				accountsAll[i].Mnemonic = a.Mnemonic
-			}
-			if a.Address != "" {
-				accountsAll[i].Address = a.Address
-			}
-			if a.PrivateKey != "" {
-				accountsAll[i].PrivateKey = a.PrivateKey
-			}
-		}
-	}
-	if !found {
+	accountOld := c.GetAccount(a.ID)
+
+	if accountOld == nil {
 		return fmt.Errorf("no related account found: %v", a)
 	}
-	return c.writeAllAccounts(accountsAll)
+	return c.writeAccount(a)
 }
 
 func (c *Client) AddAccount(a Account) error {
@@ -74,30 +91,18 @@ func (c *Client) AddAccount(a Account) error {
 		maxId := accountsAll[len(accountsAll)-1].ID
 		a.ID = maxId + 1
 	}
-	accountsAll = append(accountsAll, a)
-	return c.writeAllAccounts(accountsAll)
-}
 
-func (c *Client) DeleteAccount(a Account) error {
-	accountsAll := c.GetAllAccounts()
-
-	var newAccounts []Account
-	for _, ori := range accountsAll {
-		if ori.ID == a.ID || ori.Address == a.Address {
-			continue
-		}
-		newAccounts = append(newAccounts, ori)
-	}
-	return c.writeAllAccounts(newAccounts)
+	return c.writeAccount(a)
 }
 
 func (c *Client) GetAccount(id int) *Account {
-	accountsAll := c.GetAllAccounts()
-
-	for _, ori := range accountsAll {
-		if ori.ID == id {
-			return &ori
-		}
+	key := accountPrefix + strconv.Itoa(id)
+	v := c.cf.Get(key)
+	var a Account
+	err := json.Unmarshal(v, &a)
+	if err != nil {
+		log.Errorf("unmarshal account: %v", err)
+		return nil
 	}
-	return nil
+	return &a
 }

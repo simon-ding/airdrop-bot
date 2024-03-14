@@ -29,7 +29,7 @@ func NewServer(cfg *cfg.ServerConfig) (*Server, error) {
 		cfg: cfg,
 		r:   r,
 		db:  cl,
-		bn: client,
+		bn:  client,
 	}, nil
 }
 
@@ -42,6 +42,7 @@ type Server struct {
 }
 
 func (s *Server) Serve() error {
+	s.migrate()
 	s.r.Use(func(c *gin.Context) {
 		token := c.GetHeader(cfg.AuthHeader)
 		if token != s.cfg.Token {
@@ -82,6 +83,17 @@ func (s *Server) Serve() error {
 	return s.r.Run(":8080")
 }
 
+func (s *Server) migrate() {
+	log.Infof("db migrate begin")
+	accounts := s.db.GetAllAccountsOld()
+	for _, a := range accounts {
+		err := s.db.AddAccount(a)
+		if err != nil {
+			log.Errorf("add account: %v", err)
+		}
+	}
+	log.Infof("db migrate success")
+}
 func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
 	accounts := s.db.GetAllAccounts()
 	var m = make([]gin.H, 0, len(accounts))
