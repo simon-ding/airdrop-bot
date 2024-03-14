@@ -42,7 +42,6 @@ type Server struct {
 }
 
 func (s *Server) Serve() error {
-	s.migrate()
 	s.r.Use(func(c *gin.Context) {
 		token := c.GetHeader(cfg.AuthHeader)
 		if token != s.cfg.Token {
@@ -81,16 +80,6 @@ func (s *Server) Serve() error {
 	api.POST("/address/gen/:num", HttpHandler(s.GenAccounts))
 
 	return s.r.Run(":8080")
-}
-
-func (s *Server) migrate() {
-	log.Infof("db migrate begin")
-	accounts := s.db.GetAllAccountsOld()
-	err := s.db.BatchAddAccount(accounts)
-	if err != nil {
-		log.Errorf("add account: %v", err)
-	}
-	log.Infof("db migrate success")
 }
 func (s *Server) getAllAccounts(c *gin.Context) (interface{}, error) {
 	accounts := s.db.GetAllAccounts()

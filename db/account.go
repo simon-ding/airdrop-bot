@@ -95,20 +95,6 @@ func (c *Client) AddAccount(a Account) error {
 	return c.writeAccount(a)
 }
 
-func (c *Client) BatchAddAccount(accounts []Account) error {
-	err := c.cf.DeleteByPrefix(accountPrefix)
-	if err != nil {
-		return err
-	}
-	for _, a := range accounts {
-		err := c.writeAccount(a)
-		if err != nil {
-			return fmt.Errorf("write account %v error: %v", a.ID, err)
-		}
-	}
-	return nil
-}
-
 func (c *Client) GetAccount(id int) *Account {
 	key := accountPrefix + strconv.Itoa(id)
 	v := c.cf.Get(key)
