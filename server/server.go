@@ -86,11 +86,9 @@ func (s *Server) Serve() error {
 func (s *Server) migrate() {
 	log.Infof("db migrate begin")
 	accounts := s.db.GetAllAccountsOld()
-	for _, a := range accounts {
-		err := s.db.AddAccount(a)
-		if err != nil {
-			log.Errorf("add account: %v", err)
-		}
+	err := s.db.BatchAddAccount(accounts)
+	if err != nil {
+		log.Errorf("add account: %v", err)
 	}
 	log.Infof("db migrate success")
 }

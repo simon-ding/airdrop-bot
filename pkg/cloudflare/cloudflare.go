@@ -73,3 +73,20 @@ func (c *Client) GetByPrefix(prefix string) [][]byte {
 	}
 	return res
 }
+
+func (c *Client) Delete(key string) error {
+	_, err := c.api.DeleteWorkersKVEntry(context.Background(), cloudflare.AccountIdentifier(c.cfg.AccountId), cloudflare.DeleteWorkersKVEntryParams{
+		NamespaceID: c.cfg.KvId,
+		Key:         key,
+	})
+	return err
+}
+
+func (c *Client) DeleteByPrefix(prefix string) error {
+	keys := c.ListAllKeys(prefix)
+	_, err := c.api.DeleteWorkersKVEntries(context.Background(), cloudflare.AccountIdentifier(c.cfg.AccountId), cloudflare.DeleteWorkersKVEntriesParams{
+		NamespaceID: c.cfg.KvId,
+		Keys:        keys,
+	})
+	return err
+}
