@@ -3,7 +3,7 @@ module airdrop-bot
 go 1.21
 
 require (
-	github.com/adshao/go-binance/v2 v2.4.2
+	github.com/adshao/go-binance/v2 v2.5.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.45
 	github.com/aws/aws-sdk-go-v2/service/lightsail v1.28.4
 	github.com/chromedp/cdproto v0.0.0-20230220211738-2b1ec77315c9
