@@ -6,8 +6,8 @@ require (
 	github.com/adshao/go-binance/v2 v2.5.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.45
 	github.com/aws/aws-sdk-go-v2/service/lightsail v1.36.2
-	github.com/chromedp/cdproto v0.0.0-20230220211738-2b1ec77315c9
-	github.com/chromedp/chromedp v0.9.1
+	github.com/chromedp/cdproto v0.0.0-20240202021202-6d0b6a386732
+	github.com/chromedp/chromedp v0.9.5
 	github.com/cloudflare/cloudflare-go v0.90.0
 	github.com/ethereum/go-ethereum v1.13.13
 	github.com/gin-gonic/gin v1.9.0
@@ -59,7 +59,7 @@ require (
 	github.com/go-playground/validator/v10 v10.11.2 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
-	github.com/gobwas/ws v1.1.0 // indirect
+	github.com/gobwas/ws v1.3.2 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
