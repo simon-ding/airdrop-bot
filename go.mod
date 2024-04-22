@@ -9,7 +9,7 @@ require (
 	github.com/chromedp/cdproto v0.0.0-20230220211738-2b1ec77315c9
 	github.com/chromedp/chromedp v0.9.1
 	github.com/cloudflare/cloudflare-go v0.90.0
-	github.com/ethereum/go-ethereum v1.13.13
+	github.com/ethereum/go-ethereum v1.13.15
 	github.com/gin-gonic/gin v1.9.0
 	github.com/huobirdcenter/huobi_golang v0.0.0-20210226095227-8a30a95b6d0d
 	github.com/pkg/errors v0.9.1
